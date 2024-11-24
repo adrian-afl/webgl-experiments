@@ -8,6 +8,13 @@ import { createTexture2D } from "./gl/texture.ts";
 import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
 import { loadObjFileAsSingleMesh } from "./media/loadObjFile.ts";
 
+if (document.location.search.includes("debug=true")) {
+  void import("spectorjs").then((imported) => {
+    const spector = new imported.Spector();
+    spector.displayUI();
+  });
+}
+
 const vs = `#version 300 es 
 precision highp float;
 
