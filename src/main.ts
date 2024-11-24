@@ -6,6 +6,7 @@ import {
 } from "./gl/framebuffer.ts";
 import { createFullScreenQuad, drawMesh } from "./gl/mesh.ts";
 import { compileProgram } from "./gl/shader.ts";
+import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
 import { loadObjFileAsSingleMesh } from "./media/loadObjFile.ts";
 
 const vs = `#version 300 es 
@@ -35,37 +36,6 @@ out vec4 outColor;
 
 void main(){
   outColor = vec4(norm, 1.0);
-}
-`;
-const vsOutput = `#version 300 es 
-precision highp float;
-
-in vec3 inVertexPos;
-in vec2 inUV;
-in vec3 inNormal;
-in vec4 inTangent;
-
-out vec3 norm;
-out vec2 uv;
-
-void main(){
-  gl_Position =  vec4(inVertexPos, 1.0);
-  norm = inNormal;
-  uv = inUV;
-}
-`;
-
-const fsOutput = `#version 300 es 
-precision highp float;
-
-uniform sampler2D tex;
-
-in vec2 uv;
-
-out vec4 outColor;
-
-void main(){
-  outColor = vec4(texture(tex, uv).rgb, 1.0);
 }
 `;
 
@@ -98,7 +68,11 @@ async function initWebGL2(): Promise<void> {
   const mesh = lucyIntermediate.intermediate.createDrawableMesh(gl);
   const quad = createFullScreenQuad(gl);
   const program = compileProgram(gl, vs, fs);
-  const programOutput = compileProgram(gl, vsOutput, fsOutput);
+  const programOutput = compileProgram(
+    gl,
+    await loadAndResolveShaderSource("output.vert"),
+    await loadAndResolveShaderSource("output.frag")
+  );
 
   const framebuffer = createFramebuffer(gl, 256, 256, true);
   const attachment = createAttachment(gl, 256, 256, {
