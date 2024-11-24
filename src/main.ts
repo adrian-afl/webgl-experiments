@@ -1,11 +1,10 @@
 import {
-  attachAttachmentToFramebuffer,
-  createAttachment,
   createFramebuffer,
-  setDrawBuffersCount,
+  setFramebufferAttachments,
 } from "./gl/framebuffer.ts";
 import { createFullScreenQuad, drawMesh } from "./gl/mesh.ts";
 import { compileProgram } from "./gl/shader.ts";
+import { createTexture2D } from "./gl/texture.ts";
 import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
 import { loadObjFileAsSingleMesh } from "./media/loadObjFile.ts";
 
@@ -70,20 +69,25 @@ async function initWebGL2(): Promise<void> {
   const program = compileProgram(gl, vs, fs);
   const programOutput = compileProgram(
     gl,
-    await loadAndResolveShaderSource("output.vert"),
-    await loadAndResolveShaderSource("output.frag")
+    await loadAndResolveShaderSource("entrypoints/output/output.vert"),
+    await loadAndResolveShaderSource("entrypoints/output/output.frag")
   );
 
   const framebuffer = createFramebuffer(gl, 256, 256, true);
-  const attachment = createAttachment(gl, 256, 256, {
+
+  const attachment = createTexture2D(gl, {
+    width: 256,
+    height: 256,
     magFilter: gl.LINEAR,
     minFilter: gl.LINEAR,
     type: gl.UNSIGNED_BYTE,
     format: gl.RGBA,
     internalFormat: gl.RGBA,
+    mipmapped: false,
+    data: null,
   });
-  attachAttachmentToFramebuffer(gl, framebuffer, attachment, 0);
-  setDrawBuffersCount(gl, framebuffer, 1);
+
+  setFramebufferAttachments(gl, framebuffer, [attachment]);
 
   const uniformTexLocation = gl.getUniformLocation(programOutput, "tex");
 

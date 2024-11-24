@@ -8,7 +8,7 @@ async function resolveIncludes(
     contents.unshift(`#line 1 ${counter.toString()}`);
   }
 
-  const header = "#pragma include ";
+  const header = "#include ";
   const guard = "#pragma once";
   let encloseInGuard = false;
   for (let i = 0; i < contents.length; i++) {
