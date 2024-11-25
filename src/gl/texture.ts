@@ -93,64 +93,79 @@ export interface CreateTextureInputFromHTMLImage
   data: HTMLImageElement;
 }
 
-function isPowerOf2(value: number): boolean {
-  return (value & (value - 1)) === 0;
-}
+// function isPowerOf2(value: number): boolean {
+//   return (value & (value - 1)) === 0;
+// }
 
-export function createTexture2D(
-  gl: WebGL2RenderingContext,
-  input: CreateTextureInputFromArrayBufferView | CreateTextureInputFromHTMLImage
-): WebGLTexture {
-  const texture = gl.createTexture();
-  if (!texture) {
-    throw new Error("createTexture failed");
-  }
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  const level = 0;
-  const border = 0;
-
-  if ((input as CreateTextureInputFromArrayBufferView).width) {
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      level,
-      input.internalFormat,
-      (input as CreateTextureInputFromArrayBufferView).width,
-      (input as CreateTextureInputFromArrayBufferView).height,
-      border,
-      input.format,
-      input.type,
-      (input as CreateTextureInputFromArrayBufferView).data
-    );
-  } else {
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      level,
-      input.internalFormat,
-      input.format,
-      input.type,
-      input.data as HTMLImageElement
-    );
-  }
-
-  if (input.mipmapped) {
-    const width =
-      (input as { width?: number }).width ??
-      (input.data as HTMLImageElement).width;
-    const height =
-      (input as { height?: number }).height ??
-      (input.data as HTMLImageElement).height;
-    if (isPowerOf2(width) && isPowerOf2(height)) {
-      gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
-      throw new Error("Dimensions not power of 2, cannot mipmap");
+export class Texture2D {
+  public readonly handle: WebGLTexture;
+  public constructor(
+    gl: WebGL2RenderingContext,
+    input:
+      | CreateTextureInputFromArrayBufferView
+      | CreateTextureInputFromHTMLImage
+  ) {
+    const texture = gl.createTexture();
+    if (!texture) {
+      throw new Error("createTexture failed");
     }
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    const level = 0;
+    const border = 0;
+
+    if ((input as CreateTextureInputFromArrayBufferView).width) {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        level,
+        input.internalFormat,
+        (input as CreateTextureInputFromArrayBufferView).width,
+        (input as CreateTextureInputFromArrayBufferView).height,
+        border,
+        input.format,
+        input.type,
+        (input as CreateTextureInputFromArrayBufferView).data
+      );
+    } else {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        level,
+        input.internalFormat,
+        input.format,
+        input.type,
+        input.data as HTMLImageElement
+      );
+    }
+
+    if (input.mipmapped) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+      // Apparently in WebGL2 this is not a requirement anymore
+      // const width =
+      //   (input as { width?: number }).width ??
+      //   (input.data as HTMLImageElement).width;
+      // const height =
+      //   (input as { height?: number }).height ??
+      //   (input.data as HTMLImageElement).height;
+      // if (isPowerOf2(width) && isPowerOf2(height)) {
+      //   gl.generateMipmap(gl.TEXTURE_2D);
+      // } else {
+      //   throw new Error("Dimensions not power of 2, cannot mipmap");
+      // }
+    }
+
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_S,
+      input.wrapS ?? gl.REPEAT
+    );
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_WRAP_T,
+      input.wrapT ?? gl.REPEAT
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, input.minFilter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, input.magFilter);
+
+    this.handle = texture;
   }
-
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, input.wrapS ?? gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, input.wrapT ?? gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, input.minFilter);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, input.magFilter);
-
-  return texture;
 }

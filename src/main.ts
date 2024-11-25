@@ -1,10 +1,8 @@
-import {
-  createFramebuffer,
-  setFramebufferAttachments,
-} from "./gl/framebuffer.ts";
+import { DefaultFramebuffer, Framebuffer } from "./gl/Framebuffer.ts";
+import { checkGLError } from "./gl/checkGLError.ts";
 import { createFullScreenQuad, drawMesh } from "./gl/mesh.ts";
-import { compileProgram } from "./gl/shader.ts";
-import { createTexture2D } from "./gl/texture.ts";
+import { ShaderProgram } from "./gl/shader.ts";
+import { Texture2D } from "./gl/texture.ts";
 import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
 import { loadObjFileAsSingleMesh } from "./media/loadObjFile.ts";
 
@@ -41,7 +39,8 @@ in vec3 norm;
 out vec4 outColor;
 
 void main(){
-  outColor = vec4(norm, 1.0);
+  float c = dot(norm, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
+  outColor = vec4(c, c, c, 1.0);
 }
 `;
 
@@ -73,16 +72,24 @@ async function initWebGL2(): Promise<void> {
   const lucyIntermediate = loadObjFileAsSingleMesh(lucyObjFileContent);
   const mesh = lucyIntermediate.intermediate.createDrawableMesh(gl);
   const quad = createFullScreenQuad(gl);
-  const program = compileProgram(gl, vs, fs);
-  const programOutput = compileProgram(
+  const program = new ShaderProgram(gl, vs, fs, {});
+  const programOutput = new ShaderProgram(
     gl,
     await loadAndResolveShaderSource("entrypoints/output/output.vert"),
-    await loadAndResolveShaderSource("entrypoints/output/output.frag")
+    await loadAndResolveShaderSource("entrypoints/output/output.frag"),
+    { tex: true }
   );
 
-  const framebuffer = createFramebuffer(gl, 256, 256, true);
+  const defaultFramebuffer = new DefaultFramebuffer(
+    gl,
+    canvas.width,
+    canvas.height,
+    false
+  );
 
-  const attachment = createTexture2D(gl, {
+  const framebuffer = new Framebuffer(gl, 256, 256, true);
+
+  const attachment = new Texture2D(gl, {
     width: 256,
     height: 256,
     magFilter: gl.LINEAR,
@@ -94,56 +101,25 @@ async function initWebGL2(): Promise<void> {
     data: null,
   });
 
-  setFramebufferAttachments(gl, framebuffer, [attachment]);
+  framebuffer.setAttachments([attachment]);
 
-  const uniformTexLocation = gl.getUniformLocation(programOutput, "tex");
-
-  gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
 
   const loop = (): void => {
-    // render to framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-    gl.viewport(0, 0, 256, 256);
-    gl.useProgram(program);
-
-    gl.clearColor(1.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    framebuffer.bind();
+    framebuffer.clear();
+    program.use();
     drawMesh(gl, mesh);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.useProgram(programOutput);
+    defaultFramebuffer.bind();
+    defaultFramebuffer.clear();
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, attachment);
-    gl.uniform1i(uniformTexLocation, 0);
+    programOutput.use();
+    programOutput.bindSampler("tex", 0, attachment);
 
-    gl.clearColor(1.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     drawMesh(gl, quad);
 
-    const err = gl.getError();
-    if (err !== gl.NO_ERROR) {
-      console.error("OpenGL error detected\n");
-      switch (err) {
-        case gl.INVALID_ENUM:
-          console.error("gl.INVALID_ENUM");
-          break;
-        case gl.INVALID_VALUE:
-          console.error("gl.INVALID_VALUE");
-          break;
-        case gl.INVALID_OPERATION:
-          console.error("gl.INVALID_OPERATION");
-          break;
-        case gl.INVALID_FRAMEBUFFER_OPERATION:
-          console.error("gl.INVALID_FRAMEBUFFER_OPERATION");
-          break;
-        case gl.OUT_OF_MEMORY:
-          console.error("gl.OUT_OF_MEMORY");
-          break;
-      }
-    }
+    checkGLError(gl);
     requestAnimationFrame(loop);
   };
 
