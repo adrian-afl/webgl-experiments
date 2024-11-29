@@ -1,12 +1,12 @@
-export interface Mesh {
+interface GLMeshCreateResult {
   vao: WebGLVertexArrayObject;
   vertexCount: number;
 }
 
-export function createMesh(
+function createMesh(
   gl: WebGL2RenderingContext,
   data: Float32Array
-): Mesh {
+): GLMeshCreateResult {
   if (data.length % 12 !== 0) {
     throw new Error("invalid vertex data");
   }
@@ -122,7 +122,37 @@ export function createFullScreenQuad(gl: WebGL2RenderingContext): Mesh {
   return createMesh(gl, fullScreenQuadFloats);
 }
 
-export function drawMesh(gl: WebGL2RenderingContext, mesh: Mesh): void {
+export function drawMesh(
+  gl: WebGL2RenderingContext,
+  mesh: GLMeshCreateResult
+): void {
   gl.bindVertexArray(mesh.vao);
   gl.drawArrays(gl.TRIANGLES, 0, mesh.vertexCount);
+}
+
+export class Mesh {
+  private createdMesh: GLMeshCreateResult | null;
+
+  public constructor(
+    private readonly gl: WebGL2RenderingContext,
+    data: Float32Array
+  ) {
+    this.createdMesh = createMesh(gl, data);
+  }
+
+  public draw(): void {
+    if (this.createdMesh) {
+      this.gl.bindVertexArray(this.createdMesh.vao);
+      this.gl.drawArrays(this.gl.TRIANGLES, 0, this.createdMesh.vertexCount);
+    } else {
+      throw new Error("Draw after free");
+    }
+  }
+
+  public free(): void {
+    if (this.createdMesh) {
+      this.gl.deleteVertexArray(this.createdMesh.vao);
+    }
+    this.createdMesh = null;
+  }
 }

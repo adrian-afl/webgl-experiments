@@ -1,6 +1,6 @@
 import { vec2, vec3, vec4 } from "gl-matrix";
 
-import { Mesh, createMesh } from "../gl/mesh.ts";
+import { Mesh } from "../gl/mesh.ts";
 
 export class Vertex {
   public position: vec3;
@@ -67,7 +67,7 @@ export class Object3dIntermediate {
       arr[g++] = v.tangent[2];
       arr[g++] = v.tangent[3];
     }
-    return createMesh(gl, arr);
+    return new Mesh(gl, arr);
   }
 
   // vengine port, from 2015, i have forgotten how it works

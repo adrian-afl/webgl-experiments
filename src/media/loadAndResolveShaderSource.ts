@@ -32,7 +32,6 @@ async function resolveIncludes(
     result =
       "#ifndef " + guid + "\n#define " + guid + "\n" + result + "\n#endif";
   }
-  console.log(result);
   return result;
 }
 

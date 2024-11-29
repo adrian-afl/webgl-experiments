@@ -1,83 +1,298 @@
+import {
+  CreateGenericTextureInput2D,
+  GenericTexture2D,
+} from "../GenericAPI.ts";
+
 export interface CreateTextureInputBaseWithoutFormats {
-  minFilter:
-    | WebGL2RenderingContext["LINEAR"]
-    | WebGL2RenderingContext["NEAREST"]
-    | WebGL2RenderingContext["NEAREST_MIPMAP_NEAREST"]
-    | WebGL2RenderingContext["LINEAR_MIPMAP_NEAREST"]
-    | WebGL2RenderingContext["NEAREST_MIPMAP_LINEAR"]
-    | WebGL2RenderingContext["LINEAR_MIPMAP_LINEAR"];
-  magFilter:
-    | WebGL2RenderingContext["LINEAR"]
-    | WebGL2RenderingContext["NEAREST"];
-  wrapS?:
-    | WebGL2RenderingContext["CLAMP_TO_EDGE"]
-    | WebGL2RenderingContext["MIRRORED_REPEAT"]
-    | WebGL2RenderingContext["REPEAT"];
-  wrapT?:
-    | WebGL2RenderingContext["CLAMP_TO_EDGE"]
-    | WebGL2RenderingContext["MIRRORED_REPEAT"]
-    | WebGL2RenderingContext["REPEAT"];
-  mipmapped: boolean;
+  minFilter: number;
+  magFilter: number;
+  wrapS?: number;
+  wrapT?: number;
+  mipmap: boolean;
 }
+
+export const genericToWebGLMappers = {
+  minFilter: (v: CreateGenericTextureInput2D["minFilter"]): number => {
+    switch (v) {
+      case "nearest":
+        return WebGL2RenderingContext.NEAREST;
+      case "linear":
+        return WebGL2RenderingContext.LINEAR;
+      case "mipmap-linear":
+        return WebGL2RenderingContext.LINEAR_MIPMAP_LINEAR;
+    }
+  },
+
+  magFilter: (v: CreateGenericTextureInput2D["magFilter"]): number => {
+    switch (v) {
+      case "nearest":
+        return WebGL2RenderingContext.NEAREST;
+      case "linear":
+        return WebGL2RenderingContext.LINEAR;
+    }
+  },
+
+  wrapX: (v: CreateGenericTextureInput2D["wrapX"]): number => {
+    switch (v) {
+      case "clamp":
+        return WebGL2RenderingContext.CLAMP_TO_EDGE;
+      case "repeat":
+        return WebGL2RenderingContext.REPEAT;
+      case "mirrored-repeat":
+        return WebGL2RenderingContext.MIRRORED_REPEAT;
+    }
+  },
+
+  wrapY: (v: CreateGenericTextureInput2D["wrapY"]): number => {
+    switch (v) {
+      case "clamp":
+        return WebGL2RenderingContext.CLAMP_TO_EDGE;
+      case "repeat":
+        return WebGL2RenderingContext.REPEAT;
+      case "mirrored-repeat":
+        return WebGL2RenderingContext.MIRRORED_REPEAT;
+    }
+  },
+
+  format: (
+    dimensions: CreateGenericTextureInput2D["dimensions"],
+    format: CreateGenericTextureInput2D["format"]
+  ): { internalFormat: number; format: number; type: number } => {
+    switch (format) {
+      case "int8":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R8I,
+              format: WebGL2RenderingContext.RED,
+              type: WebGL2RenderingContext.BYTE,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG8I,
+              format: WebGL2RenderingContext.RG,
+              type: WebGL2RenderingContext.BYTE,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB8I,
+              format: WebGL2RenderingContext.RGB,
+              type: WebGL2RenderingContext.BYTE,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA8I,
+              format: WebGL2RenderingContext.RGBA,
+              type: WebGL2RenderingContext.BYTE,
+            };
+        }
+        break;
+      case "uint8":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R8UI,
+              format: WebGL2RenderingContext.RED,
+              type: WebGL2RenderingContext.UNSIGNED_BYTE,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG8UI,
+              format: WebGL2RenderingContext.RG,
+              type: WebGL2RenderingContext.UNSIGNED_BYTE,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB8UI,
+              format: WebGL2RenderingContext.RGB,
+              type: WebGL2RenderingContext.UNSIGNED_BYTE,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA8UI,
+              format: WebGL2RenderingContext.RGBA,
+              type: WebGL2RenderingContext.UNSIGNED_BYTE,
+            };
+        }
+        break;
+      case "int16":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R16I,
+              format: WebGL2RenderingContext.RED_INTEGER,
+              type: WebGL2RenderingContext.SHORT,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG16I,
+              format: WebGL2RenderingContext.RG_INTEGER,
+              type: WebGL2RenderingContext.SHORT,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB16I,
+              format: WebGL2RenderingContext.RGB_INTEGER,
+              type: WebGL2RenderingContext.SHORT,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA16I,
+              format: WebGL2RenderingContext.RGBA_INTEGER,
+              type: WebGL2RenderingContext.SHORT,
+            };
+        }
+        break;
+      case "uint16":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R16UI,
+              format: WebGL2RenderingContext.RED_INTEGER,
+              type: WebGL2RenderingContext.UNSIGNED_SHORT,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG16UI,
+              format: WebGL2RenderingContext.RG_INTEGER,
+              type: WebGL2RenderingContext.UNSIGNED_SHORT,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB16UI,
+              format: WebGL2RenderingContext.RGB_INTEGER,
+              type: WebGL2RenderingContext.UNSIGNED_SHORT,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA16UI,
+              format: WebGL2RenderingContext.RGBA_INTEGER,
+              type: WebGL2RenderingContext.UNSIGNED_SHORT,
+            };
+        }
+        break;
+      case "int32":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R32I,
+              format: WebGL2RenderingContext.RED,
+              type: WebGL2RenderingContext.INT,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG32I,
+              format: WebGL2RenderingContext.RG,
+              type: WebGL2RenderingContext.INT,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB32I,
+              format: WebGL2RenderingContext.RGB,
+              type: WebGL2RenderingContext.INT,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA32I,
+              format: WebGL2RenderingContext.RGBA,
+              type: WebGL2RenderingContext.INT,
+            };
+        }
+        break;
+      case "uint32":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R32UI,
+              format: WebGL2RenderingContext.RED,
+              type: WebGL2RenderingContext.UNSIGNED_INT,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG32UI,
+              format: WebGL2RenderingContext.RG,
+              type: WebGL2RenderingContext.UNSIGNED_INT,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB32UI,
+              format: WebGL2RenderingContext.RGB,
+              type: WebGL2RenderingContext.UNSIGNED_INT,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA32UI,
+              format: WebGL2RenderingContext.RGBA,
+              type: WebGL2RenderingContext.UNSIGNED_INT,
+            };
+        }
+        break;
+      case "float16":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R16F,
+              format: WebGL2RenderingContext.RED,
+              type: WebGL2RenderingContext.HALF_FLOAT,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG16F,
+              format: WebGL2RenderingContext.RG,
+              type: WebGL2RenderingContext.HALF_FLOAT,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB16F,
+              format: WebGL2RenderingContext.RGB,
+              type: WebGL2RenderingContext.HALF_FLOAT,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA16F,
+              format: WebGL2RenderingContext.RGBA,
+              type: WebGL2RenderingContext.HALF_FLOAT,
+            };
+        }
+        break;
+      case "float32":
+        switch (dimensions) {
+          case 1:
+            return {
+              internalFormat: WebGL2RenderingContext.R32F,
+              format: WebGL2RenderingContext.RED,
+              type: WebGL2RenderingContext.FLOAT,
+            };
+          case 2:
+            return {
+              internalFormat: WebGL2RenderingContext.RG32F,
+              format: WebGL2RenderingContext.RG,
+              type: WebGL2RenderingContext.FLOAT,
+            };
+          case 3:
+            return {
+              internalFormat: WebGL2RenderingContext.RGB32F,
+              format: WebGL2RenderingContext.RGB,
+              type: WebGL2RenderingContext.FLOAT,
+            };
+          case 4:
+            return {
+              internalFormat: WebGL2RenderingContext.RGBA32F,
+              format: WebGL2RenderingContext.RGBA,
+              type: WebGL2RenderingContext.FLOAT,
+            };
+        }
+        break;
+    }
+  },
+};
 
 export interface CreateTextureInputBase
   extends CreateTextureInputBaseWithoutFormats {
   // https://registry.khronos.org/webgl/specs/latest/2.0/#TEXTURE_TYPES_FORMATS_FROM_DOM_ELEMENTS_TABLE
-  internalFormat:
-    | WebGL2RenderingContext["RGBA"]
-    | WebGL2RenderingContext["RGB"]
-    | WebGL2RenderingContext["LUMINANCE_ALPHA"]
-    | WebGL2RenderingContext["LUMINANCE"]
-    | WebGL2RenderingContext["ALPHA"]
-    | WebGL2RenderingContext["R8"]
-    | WebGL2RenderingContext["R16F"]
-    | WebGL2RenderingContext["R32F"]
-    | WebGL2RenderingContext["R8UI"]
-    | WebGL2RenderingContext["RG8"]
-    | WebGL2RenderingContext["RG16F"]
-    | WebGL2RenderingContext["RG32F"]
-    | WebGL2RenderingContext["RG8UI"]
-    | WebGL2RenderingContext["RG16UI"]
-    | WebGL2RenderingContext["RG32UI"]
-    | WebGL2RenderingContext["RGB8"]
-    | WebGL2RenderingContext["SRGB8"]
-    | WebGL2RenderingContext["RGB565"]
-    | WebGL2RenderingContext["R11F_G11F_B10F"]
-    | WebGL2RenderingContext["RGB9_E5"]
-    | WebGL2RenderingContext["RGB16F"]
-    | WebGL2RenderingContext["RGB32F"]
-    | WebGL2RenderingContext["RGB8UI"]
-    | WebGL2RenderingContext["RGBA8"]
-    | WebGL2RenderingContext["SRGB8_ALPHA8"]
-    | WebGL2RenderingContext["RGB5_A1"]
-    | WebGL2RenderingContext["RGB10_A2"]
-    | WebGL2RenderingContext["RGBA4"]
-    | WebGL2RenderingContext["RGBA16F"]
-    | WebGL2RenderingContext["RGBA32F"]
-    | WebGL2RenderingContext["RGBA8UI"];
-  format:
-    | WebGL2RenderingContext["LUMINANCE_ALPHA"]
-    | WebGL2RenderingContext["LUMINANCE"]
-    | WebGL2RenderingContext["ALPHA"]
-    | WebGL2RenderingContext["RED"]
-    | WebGL2RenderingContext["RED_INTEGER"]
-    | WebGL2RenderingContext["RG"]
-    | WebGL2RenderingContext["RGB"]
-    | WebGL2RenderingContext["RGB_INTEGER"]
-    | WebGL2RenderingContext["RGBA"]
-    | WebGL2RenderingContext["RGBA_INTEGER"];
-  type:
-    | WebGL2RenderingContext["UNSIGNED_BYTE"]
-    | WebGL2RenderingContext["UNSIGNED_SHORT_5_6_5"]
-    | WebGL2RenderingContext["UNSIGNED_SHORT_4_4_4_4"]
-    | WebGL2RenderingContext["UNSIGNED_SHORT_5_5_5_1"]
-    | WebGL2RenderingContext["BYTE"]
-    | WebGL2RenderingContext["UNSIGNED_SHORT"]
-    | WebGL2RenderingContext["SHORT"]
-    | WebGL2RenderingContext["UNSIGNED_INT"]
-    | WebGL2RenderingContext["INT"]
-    | WebGL2RenderingContext["HALF_FLOAT"]
-    | WebGL2RenderingContext["FLOAT"];
+  internalFormat: number;
+  format: number;
+  type: number;
 }
 
 export interface CreateTextureInputFromArrayBufferView
@@ -97,7 +312,7 @@ export interface CreateTextureInputFromHTMLImage
 //   return (value & (value - 1)) === 0;
 // }
 
-export class Texture2D {
+export class Texture2D implements GenericTexture2D {
   public readonly handle: WebGLTexture;
   public constructor(
     gl: WebGL2RenderingContext,
@@ -137,7 +352,7 @@ export class Texture2D {
       );
     }
 
-    if (input.mipmapped) {
+    if (input.mipmap) {
       gl.generateMipmap(gl.TEXTURE_2D);
       // Apparently in WebGL2 this is not a requirement anymore
       // const width =
@@ -167,5 +382,9 @@ export class Texture2D {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, input.magFilter);
 
     this.handle = texture;
+  }
+
+  public getHandle(): unknown {
+    return this.handle;
   }
 }

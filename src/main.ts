@@ -1,10 +1,6 @@
-import { DefaultFramebuffer, Framebuffer } from "./gl/Framebuffer.ts";
+import { WebGLApiImplementation } from "./WebGLApiImplementation.ts";
 import { checkGLError } from "./gl/checkGLError.ts";
-import { createFullScreenQuad, drawMesh } from "./gl/mesh.ts";
-import { ShaderProgram } from "./gl/shader.ts";
-import { Texture2D } from "./gl/texture.ts";
-import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
-import { loadObjFileAsSingleMesh } from "./media/loadObjFile.ts";
+import { fullScreenQuadData } from "./media/fullScreenQuadData.ts";
 
 if (document.location.search.includes("debug=true")) {
   void import("spectorjs").then((imported) => {
@@ -12,37 +8,6 @@ if (document.location.search.includes("debug=true")) {
     spector.displayUI();
   });
 }
-
-const vs = `#version 300 es 
-precision highp float;
-
-in vec3 inVertexPos;
-in vec2 inUV;
-in vec3 inNormal;
-in vec4 inTangent;
-
-out vec3 norm;
-
-void main(){
-  gl_Position =  vec4(inVertexPos.xy * 0.1, inVertexPos.z * 0.1, 1.0);
-  norm = inNormal;
-}
-`;
-
-const fs = `#version 300 es 
-precision highp float;
-
-uniform sampler2D tex;
-
-in vec3 norm;
-
-out vec4 outColor;
-
-void main(){
-  float c = dot(norm, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
-  outColor = vec4(c, c, c, 1.0);
-}
-`;
 
 async function initWebGL2(): Promise<void> {
   const canvas = document.createElement("canvas"); // creates a new canvas element ( <canvas></canvas> )
@@ -55,72 +20,83 @@ async function initWebGL2(): Promise<void> {
     throw new Error("No WEBGL2 support");
   }
 
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  const api = new WebGLApiImplementation(gl, 1024, 1024, false);
 
-  gl.clearColor(1.0, 0.0, 0.0, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  const quad = await api.createMesh(fullScreenQuadData);
+  const dingus = await api.loadMesh("dingus.obj");
+  const dingusTexture = await api.loadTexture2D("dingus.jpg", {
+    magFilter: "linear",
+    minFilter: "linear",
+    mipmap: true,
+    wrapX: "repeat",
+    wrapY: "repeat",
+  });
 
-  const lucyObjFileRequest = await fetch("lucylowpoly.obj");
-  const lucyObjFileContent = await lucyObjFileRequest.text();
+  const meshProgram = await api.createShader(
+    "entrypoints/mesh/mesh.vert",
+    "entrypoints/mesh/mesh.frag",
+    { colorTexture: true, elapsed: true }
+  );
 
-  // const tex = await loadTextureFromImage(gl, "texture.png", {
-  //   magFilter: gl.LINEAR,
-  //   minFilter: gl.LINEAR_MIPMAP_LINEAR,
-  //   mipmapped: true,
-  // });
-
-  const lucyIntermediate = loadObjFileAsSingleMesh(lucyObjFileContent);
-  const mesh = lucyIntermediate.intermediate.createDrawableMesh(gl);
-  const quad = createFullScreenQuad(gl);
-  const program = new ShaderProgram(gl, vs, fs, {});
-  const programOutput = new ShaderProgram(
-    gl,
-    await loadAndResolveShaderSource("entrypoints/output/output.vert"),
-    await loadAndResolveShaderSource("entrypoints/output/output.frag"),
+  const outputProgram = await api.createShader(
+    "entrypoints/output/output.vert",
+    "entrypoints/output/output.frag",
     { tex: true }
   );
 
-  const defaultFramebuffer = new DefaultFramebuffer(
-    gl,
-    canvas.width,
-    canvas.height,
-    false
-  );
+  const defaultFramebuffer = await api.getDefaultFramebuffer();
 
-  const framebuffer = new Framebuffer(gl, 256, 256, true);
+  const framebuffer = await api.createFramebuffer(2048, 2048, true);
 
-  const attachment = new Texture2D(gl, {
-    width: 256,
-    height: 256,
-    magFilter: gl.LINEAR,
-    minFilter: gl.LINEAR,
-    type: gl.UNSIGNED_BYTE,
-    format: gl.RGBA,
-    internalFormat: gl.RGBA,
-    mipmapped: false,
+  const colorAttachment = await api.createTexture2D({
+    ...framebuffer.getSize(),
+    magFilter: "linear",
+    minFilter: "linear",
+    wrapX: "clamp",
+    wrapY: "clamp",
+    format: "float16",
+    dimensions: 4,
+    mipmap: false,
     data: null,
   });
 
-  framebuffer.setAttachments([attachment]);
+  const distanceAttachment = await api.createTexture2D({
+    ...framebuffer.getSize(),
+    magFilter: "nearest",
+    minFilter: "nearest",
+    wrapX: "clamp",
+    wrapY: "clamp",
+    format: "float32",
+    dimensions: 1,
+    mipmap: false,
+    data: null,
+  });
 
-  gl.enable(gl.CULL_FACE);
+  framebuffer.setAttachments([colorAttachment, distanceAttachment]);
+
+  const startTime = Date.now();
 
   const loop = (): void => {
+    const elapsed = (Date.now() - startTime) / 1000.0;
     framebuffer.bind();
-    framebuffer.clear();
-    program.use();
-    drawMesh(gl, mesh);
+    framebuffer.clear([1, 1, 1, 1], 1.0);
+    meshProgram.use();
+    meshProgram.setSamplersArray([
+      { name: "colorTexture", texture: dingusTexture },
+    ]);
+    meshProgram.setUniform("elapsed", "float", [elapsed]);
+    dingus.draw();
 
     defaultFramebuffer.bind();
-    defaultFramebuffer.clear();
+    defaultFramebuffer.clear([1, 0, 0, 1]);
+    //
+    outputProgram.use();
+    outputProgram.setSamplersArray([{ name: "tex", texture: colorAttachment }]);
 
-    programOutput.use();
-    programOutput.bindSampler("tex", 0, attachment);
-
-    drawMesh(gl, quad);
+    quad.draw();
+    requestAnimationFrame(loop);
 
     checkGLError(gl);
-    requestAnimationFrame(loop);
   };
 
   requestAnimationFrame(loop);

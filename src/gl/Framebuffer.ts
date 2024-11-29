@@ -1,17 +1,21 @@
-import { Texture2D } from "./texture.ts";
+import {
+  GenericDefaultFramebuffer,
+  GenericFramebuffer,
+  GenericTexture2D,
+} from "../GenericAPI.ts";
 
-export class DefaultFramebuffer {
+export class DefaultFramebuffer implements GenericDefaultFramebuffer {
   public readonly handle: WebGLFramebuffer | null = null;
   public constructor(
     protected readonly gl: WebGL2RenderingContext,
-    protected readonly width: number,
-    protected readonly height: number,
+    protected width: number,
+    protected height: number,
     protected readonly withDepth: boolean
   ) {}
 
-  public clear(red = 0, green = 0, blue = 0, alpha = 1, depth = 1): void {
-    this.gl.clearColor(red, green, blue, alpha);
-    if (this.withDepth) {
+  public clear(color: number[] & { length: 4 }, depth?: number): void {
+    this.gl.clearColor(color[0], color[1], color[2], color[3]);
+    if (this.withDepth && depth) {
       this.gl.clearDepth(depth);
       this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     } else {
@@ -28,9 +32,24 @@ export class DefaultFramebuffer {
       this.gl.disable(this.gl.DEPTH_TEST);
     }
   }
+
+  public resize(width: number, height: number): void {
+    this.width = width;
+    this.height = height;
+  }
+
+  public getSize(): { width: number; height: number } {
+    return {
+      width: this.width,
+      height: this.height,
+    };
+  }
 }
 
-export class Framebuffer extends DefaultFramebuffer {
+export class Framebuffer
+  extends DefaultFramebuffer
+  implements GenericFramebuffer
+{
   public override readonly handle: WebGLFramebuffer;
   public constructor(
     gl: WebGL2RenderingContext,
@@ -65,7 +84,7 @@ export class Framebuffer extends DefaultFramebuffer {
     this.handle = framebuffer;
   }
 
-  public setAttachments(textures: Texture2D[]): void {
+  public setAttachments(textures: GenericTexture2D[]): void {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.handle);
     const buffers: GLenum[] = [];
     for (let i = 0; i < textures.length; i++) {
@@ -73,7 +92,7 @@ export class Framebuffer extends DefaultFramebuffer {
         this.gl.FRAMEBUFFER,
         this.gl.COLOR_ATTACHMENT0 + i,
         this.gl.TEXTURE_2D,
-        textures[i].handle,
+        textures[i].getHandle() as WebGLTexture,
         0
       );
       buffers.push(this.gl.COLOR_ATTACHMENT0 + i);
