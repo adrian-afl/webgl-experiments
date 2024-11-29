@@ -37,7 +37,7 @@ function extractGroup(
   return match[group];
 }
 
-export function loadObjFileAsSingleMesh(contents: string): ObjFileData {
+export function loadObjFileAsSingleGeometry(contents: string): ObjFileData {
   const lines = contents
     .replaceAll("\r\n", "\n")
     .split("\n")

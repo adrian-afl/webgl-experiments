@@ -3,18 +3,18 @@ import {
   GenericAPI,
   GenericDefaultFramebuffer,
   GenericFramebuffer,
-  GenericMesh,
+  GenericGeometry,
   GenericShaderProgram,
   GenericTexture2D,
   LoadGenericTextureInput2D,
   MaybePromise,
 } from "./GenericAPI.ts";
 import { DefaultFramebuffer, Framebuffer } from "./gl/Framebuffer.ts";
-import { Mesh } from "./gl/mesh.ts";
+import { Geometry } from "./gl/geometry.ts";
 import { ShaderProgram } from "./gl/shader.ts";
 import { Texture2D, genericToWebGLMappers } from "./gl/texture.ts";
 import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
-import { loadObjFileAsSingleMesh } from "./media/loadObjFile.ts";
+import { loadObjFileAsSingleGeometry } from "./media/loadObjFile.ts";
 import { loadTextureFromImage } from "./media/loadTextureFromImage.ts";
 
 export class WebGLApiImplementation implements GenericAPI {
@@ -40,19 +40,19 @@ export class WebGLApiImplementation implements GenericAPI {
     );
   }
 
-  public createMesh(data: Float32Array): MaybePromise<GenericMesh> {
-    return new Mesh(this.gl, data);
+  public createGeometry(data: Float32Array): MaybePromise<GenericGeometry> {
+    return new Geometry(this.gl, data);
   }
 
-  public async loadMesh(file: string): Promise<GenericMesh> {
+  public async loadGeometry(file: string): Promise<GenericGeometry> {
     const fileRequest = await fetch(file);
     if (fileRequest.headers.get("Content-type") === "text/html") {
       throw new Error(`Failed loading mesh ${file}, got html`);
     }
     const fileContent = await fileRequest.text();
 
-    const objFileData = loadObjFileAsSingleMesh(fileContent);
-    return objFileData.intermediate.createDrawableMesh(this.gl);
+    const objFileData = loadObjFileAsSingleGeometry(fileContent);
+    return objFileData.intermediate.createDrawableGeometry(this.gl);
   }
 
   public async createShader<T extends Record<string, true>>(

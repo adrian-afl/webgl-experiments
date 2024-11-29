@@ -1,12 +1,14 @@
-interface GLMeshCreateResult {
+import { GenericGeometry } from "../GenericAPI.ts";
+
+interface GLGeometryCreateResult {
   vao: WebGLVertexArrayObject;
   vertexCount: number;
 }
 
-function createMesh(
+function createGeometry(
   gl: WebGL2RenderingContext,
   data: Float32Array
-): GLMeshCreateResult {
+): GLGeometryCreateResult {
   if (data.length % 12 !== 0) {
     throw new Error("invalid vertex data");
   }
@@ -44,115 +46,41 @@ function createMesh(
   };
 }
 
-export function createFullScreenQuad(gl: WebGL2RenderingContext): Mesh {
-  const fullScreenQuadFloats = new Float32Array([
-    1,
-    -1,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0, // v1
-    -1,
-    1,
-    0,
-    0,
-    1,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0, // v2
-    -1,
-    -1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0, // v3
-    1,
-    -1,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0, // v4
-    1,
-    1,
-    0,
-    1,
-    1,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0, // v5
-    -1,
-    1,
-    0,
-    0,
-    1,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-  ]); // v6
-  return createMesh(gl, fullScreenQuadFloats);
-}
-
-export function drawMesh(
+export function drawGeometry(
   gl: WebGL2RenderingContext,
-  mesh: GLMeshCreateResult
+  mesh: GLGeometryCreateResult
 ): void {
   gl.bindVertexArray(mesh.vao);
   gl.drawArrays(gl.TRIANGLES, 0, mesh.vertexCount);
 }
 
-export class Mesh {
-  private createdMesh: GLMeshCreateResult | null;
+export class Geometry implements GenericGeometry {
+  private createdGeometry: GLGeometryCreateResult | null;
 
   public constructor(
     private readonly gl: WebGL2RenderingContext,
     data: Float32Array
   ) {
-    this.createdMesh = createMesh(gl, data);
+    this.createdGeometry = createGeometry(gl, data);
   }
 
   public draw(): void {
-    if (this.createdMesh) {
-      this.gl.bindVertexArray(this.createdMesh.vao);
-      this.gl.drawArrays(this.gl.TRIANGLES, 0, this.createdMesh.vertexCount);
+    if (this.createdGeometry) {
+      this.gl.bindVertexArray(this.createdGeometry.vao);
+      this.gl.drawArrays(
+        this.gl.TRIANGLES,
+        0,
+        this.createdGeometry.vertexCount
+      );
     } else {
       throw new Error("Draw after free");
     }
   }
 
   public free(): void {
-    if (this.createdMesh) {
-      this.gl.deleteVertexArray(this.createdMesh.vao);
+    if (this.createdGeometry) {
+      this.gl.deleteVertexArray(this.createdGeometry.vao);
     }
-    this.createdMesh = null;
+    this.createdGeometry = null;
   }
 }

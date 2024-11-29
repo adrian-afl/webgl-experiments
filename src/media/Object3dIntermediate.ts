@@ -1,6 +1,6 @@
 import { vec2, vec3, vec4 } from "gl-matrix";
 
-import { Mesh } from "../gl/mesh.ts";
+import { Geometry } from "../gl/geometry.ts";
 
 export class Vertex {
   public position: vec3;
@@ -45,7 +45,7 @@ export class Object3dIntermediate {
     this.recalculateTangents();
   }
 
-  public createDrawableMesh(gl: WebGL2RenderingContext): Mesh {
+  public createDrawableGeometry(gl: WebGL2RenderingContext): Geometry {
     const verticesCount = this.vertices.length;
     const arr = new Float32Array(verticesCount * 12);
     let g = 0;
@@ -67,7 +67,7 @@ export class Object3dIntermediate {
       arr[g++] = v.tangent[2];
       arr[g++] = v.tangent[3];
     }
-    return new Mesh(gl, arr);
+    return new Geometry(gl, arr);
   }
 
   // vengine port, from 2015, i have forgotten how it works

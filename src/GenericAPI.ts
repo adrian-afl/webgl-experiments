@@ -7,7 +7,7 @@ export interface GenericShaderUniformVectorArrayType {
   float: Float32Array;
 }
 
-export interface GenericMesh {
+export interface GenericGeometry {
   draw(): void;
   free(): void;
 }
@@ -85,8 +85,8 @@ export interface GenericShaderProgram<T extends Record<string, true>> {
 }
 
 export interface GenericAPI {
-  createMesh(data: Float32Array): MaybePromise<GenericMesh>;
-  loadMesh(file: string): MaybePromise<GenericMesh>;
+  createGeometry(data: Float32Array): MaybePromise<GenericGeometry>;
+  loadGeometry(file: string): MaybePromise<GenericGeometry>;
 
   createShader<T extends Record<string, true>>(
     vertex: string,
