@@ -1,7 +1,4 @@
-import {
-  CreateGenericTextureInput2D,
-  GenericTexture2D,
-} from "../GenericAPI.ts";
+import { CreateTextureInput2D, Texture2D } from "../GPUApiInterface.ts";
 
 export interface CreateTextureInputBaseWithoutFormats {
   minFilter: number;
@@ -12,7 +9,7 @@ export interface CreateTextureInputBaseWithoutFormats {
 }
 
 export const genericToWebGLMappers = {
-  minFilter: (v: CreateGenericTextureInput2D["minFilter"]): number => {
+  minFilter: (v: CreateTextureInput2D["minFilter"]): number => {
     switch (v) {
       case "nearest":
         return WebGL2RenderingContext.NEAREST;
@@ -23,7 +20,7 @@ export const genericToWebGLMappers = {
     }
   },
 
-  magFilter: (v: CreateGenericTextureInput2D["magFilter"]): number => {
+  magFilter: (v: CreateTextureInput2D["magFilter"]): number => {
     switch (v) {
       case "nearest":
         return WebGL2RenderingContext.NEAREST;
@@ -32,7 +29,7 @@ export const genericToWebGLMappers = {
     }
   },
 
-  wrapX: (v: CreateGenericTextureInput2D["wrapX"]): number => {
+  wrapX: (v: CreateTextureInput2D["wrapX"]): number => {
     switch (v) {
       case "clamp":
         return WebGL2RenderingContext.CLAMP_TO_EDGE;
@@ -43,7 +40,7 @@ export const genericToWebGLMappers = {
     }
   },
 
-  wrapY: (v: CreateGenericTextureInput2D["wrapY"]): number => {
+  wrapY: (v: CreateTextureInput2D["wrapY"]): number => {
     switch (v) {
       case "clamp":
         return WebGL2RenderingContext.CLAMP_TO_EDGE;
@@ -55,8 +52,8 @@ export const genericToWebGLMappers = {
   },
 
   format: (
-    dimensions: CreateGenericTextureInput2D["dimensions"],
-    format: CreateGenericTextureInput2D["format"]
+    dimensions: CreateTextureInput2D["dimensions"],
+    format: CreateTextureInput2D["format"]
   ): { internalFormat: number; format: number; type: number } => {
     switch (format) {
       case "int8":
@@ -312,7 +309,7 @@ export interface CreateTextureInputFromHTMLImage
 //   return (value & (value - 1)) === 0;
 // }
 
-export class Texture2D implements GenericTexture2D {
+export class WebGLTexture2D implements Texture2D {
   public readonly handle: WebGLTexture;
   public constructor(
     private readonly gl: WebGL2RenderingContext,

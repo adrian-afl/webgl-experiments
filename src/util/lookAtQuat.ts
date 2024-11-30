@@ -13,5 +13,4 @@ export function lookAlongQuat(out: quat, normal: vec3, up: vec3): void {
   mat4.lookAt(glmTemp.mat4[0], glmTemp.vec3[0], normal, up);
   mat3.fromMat4(glmTemp.mat3[0], glmTemp.mat4[0]);
   quat.fromMat3(out, glmTemp.mat3[0]);
-  console.log(out);
 }

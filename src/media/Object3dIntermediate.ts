@@ -1,7 +1,5 @@
 import { vec2, vec3, vec4 } from "gl-matrix";
 
-import { Geometry } from "../gl/geometry.ts";
-
 export class Vertex {
   public position: vec3;
   public uv: vec2;
@@ -21,23 +19,6 @@ export class Vertex {
   }
 }
 
-// warning! this behaved weirdly
-export const rawP3U2N3ToVertexArray = (data: number[]): Vertex[] => {
-  const result: Vertex[] = [];
-  const verticesCount = data.length / 8;
-  for (let i = 0; i < verticesCount; i += 8) {
-    result.push(
-      new Vertex(
-        [data[i], data[i + 1], data[i + 2]],
-        [data[i + 3], data[i + 4]],
-        [data[i + 5], data[i + 6], data[i + 7]],
-        [0.0, 0.0, 0.0, 0.0]
-      )
-    );
-  }
-  return result;
-};
-
 export class Object3dIntermediate {
   public readonly vertices: Vertex[];
   public constructor(vertices: Vertex[]) {
@@ -45,7 +26,7 @@ export class Object3dIntermediate {
     this.recalculateTangents();
   }
 
-  public createDrawableGeometry(gl: WebGL2RenderingContext): Geometry {
+  public getVertexArray(): Float32Array {
     const verticesCount = this.vertices.length;
     const arr = new Float32Array(verticesCount * 12);
     let g = 0;
@@ -67,7 +48,7 @@ export class Object3dIntermediate {
       arr[g++] = v.tangent[2];
       arr[g++] = v.tangent[3];
     }
-    return new Geometry(gl, arr);
+    return arr;
   }
 
   // vengine port, from 2015, i have forgotten how it works

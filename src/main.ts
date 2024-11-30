@@ -1,18 +1,18 @@
 import { quat, vec3 } from "gl-matrix";
 
-import { Camera } from "./Camera.ts";
 import {
-  GenericAPI,
-  GenericDefaultFramebuffer,
-  GenericFramebuffer,
-  GenericGeometry,
-  GenericShaderProgram,
-  GenericTexture2D,
-} from "./GenericAPI.ts";
-import { Mesh } from "./Mesh.ts";
-import { WebGLApiImplementation } from "./WebGLApiImplementation.ts";
-import { checkGLError } from "./gl/checkGLError.ts";
+  DefaultFramebuffer,
+  Framebuffer,
+  GPUApiInterface,
+  Geometry,
+  ShaderProgram,
+  Texture2D,
+} from "./gpu/GPUApiInterface.ts";
+import { WebGLApiImplementation } from "./gpu/webgl/WebGLApiImplementation.ts";
+import { checkGLError } from "./gpu/webgl/checkGLError.ts";
 import { fullScreenQuadData } from "./media/fullScreenQuadData.ts";
+import { Camera } from "./scene/Camera.ts";
+import { Mesh } from "./scene/Mesh.ts";
 import { lookAlongQuat } from "./util/lookAtQuat.ts";
 
 if (document.location.search.includes("debug=true")) {
@@ -23,17 +23,17 @@ if (document.location.search.includes("debug=true")) {
 }
 
 class MeshMRTStage {
-  private meshProgram!: GenericShaderProgram<{
+  private meshProgram!: ShaderProgram<{
     colorTexture: true;
     elapsed: true;
     perspectiveViewMatrix: true;
     modelMatrix: true;
   }>;
-  private framebuffer!: GenericFramebuffer;
-  private colorTexture!: GenericTexture2D;
-  private distanceTexture!: GenericTexture2D;
+  private framebuffer!: Framebuffer;
+  private colorTexture!: Texture2D;
+  private distanceTexture!: Texture2D;
 
-  public constructor(private readonly api: GenericAPI) {}
+  public constructor(private readonly api: GPUApiInterface) {}
 
   public async initialize(): Promise<void> {
     this.meshProgram = await this.api.createShader(
@@ -47,7 +47,8 @@ class MeshMRTStage {
       }
     );
 
-    const size = (await this.api.getDefaultFramebuffer()).getSize();
+    const defaultFramebuffer = await this.api.getDefaultFramebuffer();
+    const size = await defaultFramebuffer.getSize();
 
     this.framebuffer = await this.api.createFramebuffer(
       size.width,
@@ -59,8 +60,10 @@ class MeshMRTStage {
   }
 
   private async createTextures(): Promise<void> {
+    const framebufferSize = await this.framebuffer.getSize();
+
     this.colorTexture = await this.api.createTexture2D({
-      ...this.framebuffer.getSize(),
+      ...framebufferSize,
       magFilter: "linear",
       minFilter: "linear",
       wrapX: "clamp",
@@ -72,7 +75,7 @@ class MeshMRTStage {
     });
 
     this.distanceTexture = await this.api.createTexture2D({
-      ...this.framebuffer.getSize(),
+      ...framebufferSize,
       magFilter: "nearest",
       minFilter: "nearest",
       wrapX: "clamp",
@@ -83,51 +86,55 @@ class MeshMRTStage {
       data: null,
     });
 
-    this.framebuffer.setAttachments([this.colorTexture, this.distanceTexture]);
+    await this.framebuffer.setAttachments([
+      this.colorTexture,
+      this.distanceTexture,
+    ]);
   }
 
   public async recreateTextures(): Promise<void> {
-    const size = (await this.api.getDefaultFramebuffer()).getSize();
-    this.framebuffer.resize(size.width, size.height);
-    this.colorTexture.free();
-    this.distanceTexture.free();
+    const defaultFramebuffer = await this.api.getDefaultFramebuffer();
+    const size = await defaultFramebuffer.getSize();
+    await this.framebuffer.resize(size.width, size.height);
+    await this.colorTexture.free();
+    await this.distanceTexture.free();
     await this.createTextures();
   }
 
-  public draw(
+  public async draw(
     camera: Camera,
     meshes: Mesh[],
     uniforms: { elapsed: number }
-  ): void {
-    this.framebuffer.bind();
-    this.framebuffer.clear([1, 1, 1, 1], 1.0);
-    this.meshProgram.use();
-    this.meshProgram.setUniform("elapsed", "float", [uniforms.elapsed]);
-    camera.setUniforms(this.meshProgram);
+  ): Promise<void> {
+    await this.framebuffer.bind();
+    await this.framebuffer.clear([1, 1, 1, 1], 1.0);
+    await this.meshProgram.use();
+    await this.meshProgram.setUniform("elapsed", "float", [uniforms.elapsed]);
+    await camera.setUniforms(this.meshProgram);
     const count = meshes.length;
     for (let i = 0; i < count; i++) {
-      meshes[i].setUniforms(this.meshProgram);
-      meshes[i].draw(this.meshProgram);
+      await meshes[i].setUniforms(camera.position, this.meshProgram);
+      await meshes[i].draw(this.meshProgram);
     }
   }
 
   public getOutputs(): {
-    color: GenericTexture2D;
-    distance: GenericTexture2D;
+    color: Texture2D;
+    distance: Texture2D;
   } {
     return { color: this.colorTexture, distance: this.distanceTexture };
   }
 }
 
 class OutputStage {
-  private outputProgram!: GenericShaderProgram<{
+  private outputProgram!: ShaderProgram<{
     colorTexture: true;
     distanceTexture: true;
   }>;
-  private framebuffer!: GenericDefaultFramebuffer;
-  private fullScreenQuadGeometry!: GenericGeometry;
+  private framebuffer!: DefaultFramebuffer;
+  private fullScreenQuadGeometry!: Geometry;
 
-  public constructor(private readonly api: GenericAPI) {}
+  public constructor(private readonly api: GPUApiInterface) {}
 
   public async initialize(): Promise<void> {
     this.fullScreenQuadGeometry =
@@ -145,18 +152,18 @@ class OutputStage {
     this.framebuffer = await this.api.getDefaultFramebuffer();
   }
 
-  public draw(uniforms: {
-    colorTexture: GenericTexture2D;
-    distanceTexture: GenericTexture2D;
-  }): void {
-    this.framebuffer.bind();
-    this.framebuffer.clear([1, 1, 1, 1], 1.0);
-    this.outputProgram.use();
-    this.outputProgram.setSamplersArray([
+  public async draw(uniforms: {
+    colorTexture: Texture2D;
+    distanceTexture: Texture2D;
+  }): Promise<void> {
+    await this.framebuffer.bind();
+    await this.framebuffer.clear([1, 1, 1, 1], 1.0);
+    await this.outputProgram.use();
+    await this.outputProgram.setSamplersArray([
       { name: "colorTexture", texture: uniforms.colorTexture },
       { name: "distanceTexture", texture: uniforms.distanceTexture },
     ]);
-    this.fullScreenQuadGeometry.draw();
+    await this.fullScreenQuadGeometry.draw();
   }
 }
 
@@ -183,8 +190,6 @@ async function initWebGL2(): Promise<void> {
   });
   const dingusMesh = new Mesh(dingusGeometry, dingusTexture);
 
-  vec3.set(dingusMesh.position, 0, -0.3, -5);
-
   const scene = [dingusMesh];
 
   const meshStage = new MeshMRTStage(api);
@@ -201,9 +206,10 @@ async function initWebGL2(): Promise<void> {
   const camera = new Camera();
   camera.setPerspective(70, 1, 0.01, 1000);
   lookAlongQuat(camera.orientation, [0, 0, -1], [0, 1, 0]);
+  vec3.set(camera.position, 0, 0.3, 5);
 
   const handleResizing = async (force: boolean): Promise<void> => {
-    const size = defaultFramebuffer.getSize();
+    const size = await defaultFramebuffer.getSize();
     if (
       size.width !== document.body.clientWidth ||
       size.height !== document.body.clientHeight ||
@@ -211,7 +217,7 @@ async function initWebGL2(): Promise<void> {
     ) {
       canvas.width = document.body.clientWidth;
       canvas.height = document.body.clientHeight;
-      defaultFramebuffer.resize(
+      await defaultFramebuffer.resize(
         document.body.clientWidth,
         document.body.clientHeight
       );
@@ -229,22 +235,24 @@ async function initWebGL2(): Promise<void> {
   const loop = async (): Promise<void> => {
     const elapsed = (Date.now() - startTime) / 1000.0;
 
-    quat.setAxisAngle(dingusMesh.orientation, vec3Up, elapsed);
+    quat.setAxisAngle(dingusMesh.orientation, vec3Up, -elapsed);
 
-    meshStage.draw(camera, scene, { elapsed });
+    await meshStage.draw(camera, scene, { elapsed });
 
-    outputStage.draw({
+    await outputStage.draw({
       colorTexture: meshStageOutputs.color,
       distanceTexture: meshStageOutputs.distance,
     });
 
-    await handleResizing(false);
+    // await handleResizing(false);
 
     checkGLError(gl);
-    requestAnimationFrame(() => void loop());
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    requestAnimationFrame(loop);
   };
 
-  requestAnimationFrame(() => void loop());
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  requestAnimationFrame(loop);
 }
 
 void initWebGL2();

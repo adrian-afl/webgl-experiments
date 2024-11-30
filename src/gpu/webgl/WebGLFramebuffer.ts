@@ -1,10 +1,10 @@
 import {
-  GenericDefaultFramebuffer,
-  GenericFramebuffer,
-  GenericTexture2D,
-} from "../GenericAPI.ts";
+  DefaultFramebuffer,
+  Framebuffer,
+  Texture2D,
+} from "../GPUApiInterface.ts";
 
-export class DefaultFramebuffer implements GenericDefaultFramebuffer {
+export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
   public readonly handle: WebGLFramebuffer | null = null;
   public constructor(
     protected readonly gl: WebGL2RenderingContext,
@@ -46,9 +46,9 @@ export class DefaultFramebuffer implements GenericDefaultFramebuffer {
   }
 }
 
-export class Framebuffer
-  extends DefaultFramebuffer
-  implements GenericFramebuffer
+export class WebGLFramebufferClass
+  extends WebGLDefaultFramebuffer
+  implements Framebuffer
 {
   public override readonly handle: WebGLFramebuffer;
   private framebuffer: WebGLFramebuffer;
@@ -112,7 +112,7 @@ export class Framebuffer
     }
   }
 
-  public setAttachments(textures: GenericTexture2D[]): void {
+  public setAttachments(textures: Texture2D[]): void {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.handle);
     const buffers: GLenum[] = [];
     for (let i = 0; i < textures.length; i++) {

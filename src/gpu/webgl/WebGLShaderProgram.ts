@@ -1,9 +1,9 @@
 import {
-  GenericShaderProgram,
-  GenericShaderUniformType,
-  GenericShaderUniformVectorArrayType,
-  GenericTexture2D,
-} from "../GenericAPI.ts";
+  ShaderProgram,
+  ShaderUniformType,
+  ShaderUniformVectorArrayType,
+  Texture2D,
+} from "../GPUApiInterface.ts";
 
 function compileShader(
   gl: WebGL2RenderingContext,
@@ -56,8 +56,8 @@ function compileProgram(
 }
 
 // weird type!!!! but can live with this, kind of like prisma
-export class ShaderProgram<T extends Record<string, true>>
-  implements GenericShaderProgram<T>
+export class WebGLShaderProgram<T extends Record<string, true>>
+  implements ShaderProgram<T>
 {
   public readonly handle: WebGLProgram;
   private readonly uniformsLocationsMap: Map<
@@ -105,7 +105,7 @@ export class ShaderProgram<T extends Record<string, true>>
 
   public setSamplersArray(
     // this MIGHT have performance penality but fuck it anyway
-    binds: { name: Extract<keyof T, string>; texture: GenericTexture2D }[]
+    binds: { name: Extract<keyof T, string>; texture: Texture2D }[]
   ): void {
     for (let i = 0; i < binds.length; i++) {
       this.gl.activeTexture(this.gl.TEXTURE0 + i);
@@ -119,7 +119,7 @@ export class ShaderProgram<T extends Record<string, true>>
 
   public setUniform(
     name: Extract<keyof T, string>,
-    type: GenericShaderUniformType,
+    type: ShaderUniformType,
     values: number[] & { length: 1 | 2 | 3 | 4 }
   ): void {
     switch (values.length) {
@@ -147,7 +147,7 @@ export class ShaderProgram<T extends Record<string, true>>
 
   private setUniform1(
     name: Extract<keyof T, string>,
-    type: GenericShaderUniformType,
+    type: ShaderUniformType,
     value: number
   ): void {
     switch (type) {
@@ -165,7 +165,7 @@ export class ShaderProgram<T extends Record<string, true>>
 
   private setUniform2(
     name: Extract<keyof T, string>,
-    type: GenericShaderUniformType,
+    type: ShaderUniformType,
     x: number,
     y: number
   ): void {
@@ -184,7 +184,7 @@ export class ShaderProgram<T extends Record<string, true>>
 
   private setUniform3(
     name: Extract<keyof T, string>,
-    type: GenericShaderUniformType,
+    type: ShaderUniformType,
     x: number,
     y: number,
     z: number
@@ -204,7 +204,7 @@ export class ShaderProgram<T extends Record<string, true>>
 
   private setUniform4(
     name: Extract<keyof T, string>,
-    type: GenericShaderUniformType,
+    type: ShaderUniformType,
     x: number,
     y: number,
     z: number,
@@ -223,11 +223,11 @@ export class ShaderProgram<T extends Record<string, true>>
     }
   }
 
-  public setUniformArray<TV extends GenericShaderUniformType>(
+  public setUniformArray<TV extends ShaderUniformType>(
     name: Extract<keyof T, string>,
     type: TV,
     dimensions: 1 | 2 | 3 | 4,
-    values: GenericShaderUniformVectorArrayType[TV]
+    values: ShaderUniformVectorArrayType[TV]
   ): void {
     switch (dimensions) {
       case 1:
@@ -245,10 +245,10 @@ export class ShaderProgram<T extends Record<string, true>>
     }
   }
 
-  private setUniform1Array<TV extends GenericShaderUniformType>(
+  private setUniform1Array<TV extends ShaderUniformType>(
     name: Extract<keyof T, string>,
     type: TV,
-    values: GenericShaderUniformVectorArrayType[TV]
+    values: ShaderUniformVectorArrayType[TV]
   ): void {
     switch (type) {
       case "float":
@@ -263,10 +263,10 @@ export class ShaderProgram<T extends Record<string, true>>
     }
   }
 
-  private setUniform2Array<TV extends GenericShaderUniformType>(
+  private setUniform2Array<TV extends ShaderUniformType>(
     name: Extract<keyof T, string>,
     type: TV,
-    values: GenericShaderUniformVectorArrayType[TV]
+    values: ShaderUniformVectorArrayType[TV]
   ): void {
     switch (type) {
       case "float":
@@ -281,10 +281,10 @@ export class ShaderProgram<T extends Record<string, true>>
     }
   }
 
-  private setUniform3Array<TV extends GenericShaderUniformType>(
+  private setUniform3Array<TV extends ShaderUniformType>(
     name: Extract<keyof T, string>,
     type: TV,
-    values: GenericShaderUniformVectorArrayType[TV]
+    values: ShaderUniformVectorArrayType[TV]
   ): void {
     switch (type) {
       case "float":
@@ -299,10 +299,10 @@ export class ShaderProgram<T extends Record<string, true>>
     }
   }
 
-  private setUniform4Array<TV extends GenericShaderUniformType>(
+  private setUniform4Array<TV extends ShaderUniformType>(
     name: Extract<keyof T, string>,
     type: TV,
-    values: GenericShaderUniformVectorArrayType[TV]
+    values: ShaderUniformVectorArrayType[TV]
   ): void {
     switch (type) {
       case "float":

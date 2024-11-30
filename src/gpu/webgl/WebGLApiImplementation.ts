@@ -1,24 +1,49 @@
+import { loadObjFileAsSingleGeometry } from "../../media/loadObjFile.ts";
 import {
-  CreateGenericTextureInput2D,
-  GenericAPI,
-  GenericDefaultFramebuffer,
-  GenericFramebuffer,
-  GenericGeometry,
-  GenericShaderProgram,
-  GenericTexture2D,
-  LoadGenericTextureInput2D,
+  CreateTextureInput2D,
+  DefaultFramebuffer,
+  Framebuffer,
+  GPUApiInterface,
+  Geometry,
+  LoadTextureInput2D,
   MaybePromise,
-} from "./GenericAPI.ts";
-import { DefaultFramebuffer, Framebuffer } from "./gl/Framebuffer.ts";
-import { Geometry } from "./gl/geometry.ts";
-import { ShaderProgram } from "./gl/shader.ts";
-import { Texture2D, genericToWebGLMappers } from "./gl/texture.ts";
-import { loadAndResolveShaderSource } from "./media/loadAndResolveShaderSource.ts";
-import { loadObjFileAsSingleGeometry } from "./media/loadObjFile.ts";
-import { loadTextureFromImage } from "./media/loadTextureFromImage.ts";
+  ShaderProgram,
+  Texture2D,
+} from "../GPUApiInterface.ts";
+import {
+  WebGLDefaultFramebuffer,
+  WebGLFramebufferClass,
+} from "./WebGLFramebuffer.ts";
+import { WebGLGeometry } from "./WebGLGeometry.ts";
+import { WebGLShaderProgram } from "./WebGLShaderProgram.ts";
+import { WebGLTexture2D, genericToWebGLMappers } from "./WebGLTexture2D.ts";
+import { CreateTextureInputBaseWithoutFormats } from "./WebGLTexture2D.ts";
+import { loadAndResolveShaderSource } from "./loadAndResolveShaderSource.ts";
 
-export class WebGLApiImplementation implements GenericAPI {
-  private readonly defaultFramebuffer: DefaultFramebuffer;
+function loadTextureFromImage(
+  gl: WebGL2RenderingContext,
+  url: string,
+  parameters: CreateTextureInputBaseWithoutFormats
+): Promise<WebGLTexture2D> {
+  return new Promise<WebGLTexture2D>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const texture = new WebGLTexture2D(gl, {
+        format: gl.RGBA,
+        type: gl.UNSIGNED_BYTE,
+        internalFormat: gl.RGBA,
+        ...parameters,
+        data: image,
+      });
+      resolve(texture);
+    };
+    image.onerror = reject;
+    image.src = url;
+  });
+}
+
+export class WebGLApiImplementation implements GPUApiInterface {
+  private readonly defaultFramebuffer: WebGLDefaultFramebuffer;
 
   public constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -32,7 +57,7 @@ export class WebGLApiImplementation implements GenericAPI {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
-    this.defaultFramebuffer = new DefaultFramebuffer(
+    this.defaultFramebuffer = new WebGLDefaultFramebuffer(
       this.gl,
       outputWidth,
       outputHeight,
@@ -40,11 +65,11 @@ export class WebGLApiImplementation implements GenericAPI {
     );
   }
 
-  public createGeometry(data: Float32Array): MaybePromise<GenericGeometry> {
-    return new Geometry(this.gl, data);
+  public createGeometry(data: Float32Array): MaybePromise<Geometry> {
+    return new WebGLGeometry(this.gl, data);
   }
 
-  public async loadGeometry(file: string): Promise<GenericGeometry> {
+  public async loadGeometry(file: string): Promise<Geometry> {
     const fileRequest = await fetch(file);
     if (fileRequest.headers.get("Content-type") === "text/html") {
       throw new Error(`Failed loading mesh ${file}, got html`);
@@ -52,28 +77,28 @@ export class WebGLApiImplementation implements GenericAPI {
     const fileContent = await fileRequest.text();
 
     const objFileData = loadObjFileAsSingleGeometry(fileContent);
-    return objFileData.intermediate.createDrawableGeometry(this.gl);
+    return this.createGeometry(objFileData.intermediate.getVertexArray());
   }
 
   public async createShader<T extends Record<string, true>>(
     vertex: string,
     fragment: string,
     uniforms: T
-  ): Promise<GenericShaderProgram<T>> {
+  ): Promise<ShaderProgram<T>> {
     const vertexSrc = await loadAndResolveShaderSource(vertex);
     const fragmentSrc = await loadAndResolveShaderSource(fragment);
 
-    return new ShaderProgram(this.gl, vertexSrc, fragmentSrc, uniforms);
+    return new WebGLShaderProgram(this.gl, vertexSrc, fragmentSrc, uniforms);
   }
 
   public createTexture2D(
-    params: CreateGenericTextureInput2D
-  ): MaybePromise<GenericTexture2D> {
+    params: CreateTextureInput2D
+  ): MaybePromise<Texture2D> {
     const mappedFormats = genericToWebGLMappers.format(
       params.dimensions,
       params.format
     );
-    return new Texture2D(this.gl, {
+    return new WebGLTexture2D(this.gl, {
       data: params.data,
       width: params.width,
       height: params.height,
@@ -90,8 +115,8 @@ export class WebGLApiImplementation implements GenericAPI {
 
   public loadTexture2D(
     file: string,
-    params: LoadGenericTextureInput2D
-  ): MaybePromise<GenericTexture2D> {
+    params: LoadTextureInput2D
+  ): MaybePromise<Texture2D> {
     return loadTextureFromImage(this.gl, file, {
       mipmap: params.mipmap,
       magFilter: genericToWebGLMappers.magFilter(params.magFilter),
@@ -101,7 +126,7 @@ export class WebGLApiImplementation implements GenericAPI {
     });
   }
 
-  public getDefaultFramebuffer(): MaybePromise<GenericDefaultFramebuffer> {
+  public getDefaultFramebuffer(): MaybePromise<DefaultFramebuffer> {
     return this.defaultFramebuffer;
   }
 
@@ -113,7 +138,7 @@ export class WebGLApiImplementation implements GenericAPI {
     width: number,
     height: number,
     withDepth: boolean
-  ): MaybePromise<GenericFramebuffer> {
-    return new Framebuffer(this.gl, width, height, withDepth);
+  ): MaybePromise<Framebuffer> {
+    return new WebGLFramebufferClass(this.gl, width, height, withDepth);
   }
 }

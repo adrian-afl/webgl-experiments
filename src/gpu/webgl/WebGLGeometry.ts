@@ -1,4 +1,4 @@
-import { GenericGeometry } from "../GenericAPI.ts";
+import { Geometry } from "../GPUApiInterface.ts";
 
 interface GLGeometryCreateResult {
   vao: WebGLVertexArrayObject;
@@ -54,7 +54,7 @@ export function drawGeometry(
   gl.drawArrays(gl.TRIANGLES, 0, mesh.vertexCount);
 }
 
-export class Geometry implements GenericGeometry {
+export class WebGLGeometry implements Geometry {
   private createdGeometry: GLGeometryCreateResult | null;
 
   public constructor(
