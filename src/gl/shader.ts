@@ -60,8 +60,10 @@ export class ShaderProgram<T extends Record<string, true>>
   implements GenericShaderProgram<T>
 {
   public readonly handle: WebGLProgram;
-  private readonly uniformsLocationsMap: Map<string, WebGLUniformLocation> =
-    new Map<string, WebGLUniformLocation>();
+  private readonly uniformsLocationsMap: Map<
+    string,
+    WebGLUniformLocation | null
+  > = new Map<string, WebGLUniformLocation | null>();
 
   public constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -73,7 +75,8 @@ export class ShaderProgram<T extends Record<string, true>>
     for (const key in uniforms) {
       const location = gl.getUniformLocation(this.handle, key);
       if (!location) {
-        throw new Error(`Cannot find the location of uniform ${key}`);
+        // throw new Error(`Cannot find the location of uniform ${key}`);
+        console.warn(`Cannot find the location of uniform ${key}`);
       }
       this.uniformsLocationsMap.set(key, location);
     }
@@ -318,7 +321,7 @@ export class ShaderProgram<T extends Record<string, true>>
     name: Extract<keyof T, string>,
     dimensionsBoth: 2 | 3 | 4,
     transpose: boolean,
-    values: Float32Array
+    values: Float32List
   ): void {
     switch (dimensionsBoth) {
       case 2:

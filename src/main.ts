@@ -1,3 +1,6 @@
+import { quat, vec3 } from "gl-matrix";
+
+import { Camera } from "./Camera.ts";
 import {
   GenericAPI,
   GenericDefaultFramebuffer,
@@ -10,6 +13,7 @@ import { Mesh } from "./Mesh.ts";
 import { WebGLApiImplementation } from "./WebGLApiImplementation.ts";
 import { checkGLError } from "./gl/checkGLError.ts";
 import { fullScreenQuadData } from "./media/fullScreenQuadData.ts";
+import { lookAlongQuat } from "./util/lookAtQuat.ts";
 
 if (document.location.search.includes("debug=true")) {
   void import("spectorjs").then((imported) => {
@@ -22,6 +26,8 @@ class MeshMRTStage {
   private meshProgram!: GenericShaderProgram<{
     colorTexture: true;
     elapsed: true;
+    perspectiveViewMatrix: true;
+    modelMatrix: true;
   }>;
   private framebuffer!: GenericFramebuffer;
   private colorTexture!: GenericTexture2D;
@@ -33,11 +39,26 @@ class MeshMRTStage {
     this.meshProgram = await this.api.createShader(
       "entrypoints/mesh/mesh.vert",
       "entrypoints/mesh/mesh.frag",
-      { colorTexture: true, elapsed: true }
+      {
+        colorTexture: true,
+        elapsed: true,
+        perspectiveViewMatrix: true,
+        modelMatrix: true,
+      }
     );
 
-    this.framebuffer = await this.api.createFramebuffer(2048, 2048, true);
+    const size = (await this.api.getDefaultFramebuffer()).getSize();
 
+    this.framebuffer = await this.api.createFramebuffer(
+      size.width,
+      size.height,
+      true
+    );
+
+    await this.createTextures();
+  }
+
+  private async createTextures(): Promise<void> {
     this.colorTexture = await this.api.createTexture2D({
       ...this.framebuffer.getSize(),
       magFilter: "linear",
@@ -65,13 +86,27 @@ class MeshMRTStage {
     this.framebuffer.setAttachments([this.colorTexture, this.distanceTexture]);
   }
 
-  public draw(meshes: Mesh[], uniforms: { elapsed: number }): void {
+  public async recreateTextures(): Promise<void> {
+    const size = (await this.api.getDefaultFramebuffer()).getSize();
+    this.framebuffer.resize(size.width, size.height);
+    this.colorTexture.free();
+    this.distanceTexture.free();
+    await this.createTextures();
+  }
+
+  public draw(
+    camera: Camera,
+    meshes: Mesh[],
+    uniforms: { elapsed: number }
+  ): void {
     this.framebuffer.bind();
     this.framebuffer.clear([1, 1, 1, 1], 1.0);
     this.meshProgram.use();
     this.meshProgram.setUniform("elapsed", "float", [uniforms.elapsed]);
+    camera.setUniforms(this.meshProgram);
     const count = meshes.length;
     for (let i = 0; i < count; i++) {
+      meshes[i].setUniforms(this.meshProgram);
       meshes[i].draw(this.meshProgram);
     }
   }
@@ -146,34 +181,70 @@ async function initWebGL2(): Promise<void> {
     wrapX: "repeat",
     wrapY: "repeat",
   });
-  const dignusMesh = new Mesh(dingusGeometry, dingusTexture);
+  const dingusMesh = new Mesh(dingusGeometry, dingusTexture);
 
-  const scene = [dignusMesh];
+  vec3.set(dingusMesh.position, 0, -0.3, -5);
+
+  const scene = [dingusMesh];
 
   const meshStage = new MeshMRTStage(api);
   await meshStage.initialize();
-  const meshStageOutputs = meshStage.getOutputs();
+  let meshStageOutputs = meshStage.getOutputs();
 
   const outputStage = new OutputStage(api);
   await outputStage.initialize();
 
   const startTime = Date.now();
 
-  const loop = (): void => {
+  const defaultFramebuffer = await api.getDefaultFramebuffer();
+
+  const camera = new Camera();
+  camera.setPerspective(70, 1, 0.01, 1000);
+  lookAlongQuat(camera.orientation, [0, 0, -1], [0, 1, 0]);
+
+  const handleResizing = async (force: boolean): Promise<void> => {
+    const size = defaultFramebuffer.getSize();
+    if (
+      size.width !== document.body.clientWidth ||
+      size.height !== document.body.clientHeight ||
+      force
+    ) {
+      canvas.width = document.body.clientWidth;
+      canvas.height = document.body.clientHeight;
+      defaultFramebuffer.resize(
+        document.body.clientWidth,
+        document.body.clientHeight
+      );
+      await meshStage.recreateTextures();
+      meshStageOutputs = meshStage.getOutputs();
+      const aspect = document.body.clientWidth / document.body.clientHeight;
+      camera.setPerspective(70, aspect, 0.01, 1000);
+    }
+  };
+
+  await handleResizing(true);
+
+  const vec3Up: vec3 = [0, 1, 0];
+
+  const loop = async (): Promise<void> => {
     const elapsed = (Date.now() - startTime) / 1000.0;
-    meshStage.draw(scene, { elapsed });
+
+    quat.setAxisAngle(dingusMesh.orientation, vec3Up, elapsed);
+
+    meshStage.draw(camera, scene, { elapsed });
 
     outputStage.draw({
       colorTexture: meshStageOutputs.color,
       distanceTexture: meshStageOutputs.distance,
     });
 
-    requestAnimationFrame(loop);
+    await handleResizing(false);
 
     checkGLError(gl);
+    requestAnimationFrame(() => void loop());
   };
 
-  requestAnimationFrame(loop);
+  requestAnimationFrame(() => void loop());
 }
 
 void initWebGL2();

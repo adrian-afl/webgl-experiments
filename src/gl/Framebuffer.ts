@@ -51,6 +51,8 @@ export class Framebuffer
   implements GenericFramebuffer
 {
   public override readonly handle: WebGLFramebuffer;
+  private framebuffer: WebGLFramebuffer;
+  private renderBuffer: WebGLRenderbuffer | null = null;
   public constructor(
     gl: WebGL2RenderingContext,
     width: number,
@@ -62,11 +64,12 @@ export class Framebuffer
     if (!framebuffer) {
       throw new Error("createFramebuffer failed");
     }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    this.framebuffer = framebuffer;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
 
-    if (withDepth) {
-      const renderBuffer = gl.createRenderbuffer();
-      gl.bindRenderbuffer(gl.RENDERBUFFER, renderBuffer);
+    if (this.withDepth) {
+      this.renderBuffer = gl.createRenderbuffer();
+      gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderBuffer);
       gl.renderbufferStorage(
         gl.RENDERBUFFER,
         gl.DEPTH_COMPONENT32F,
@@ -77,11 +80,36 @@ export class Framebuffer
         gl.FRAMEBUFFER,
         gl.DEPTH_ATTACHMENT,
         gl.RENDERBUFFER,
-        renderBuffer
+        this.renderBuffer
       );
     }
 
     this.handle = framebuffer;
+  }
+
+  public override resize(width: number, height: number): void {
+    super.resize(width, height);
+
+    if (this.withDepth) {
+      if (this.renderBuffer) {
+        this.gl.deleteRenderbuffer(this.renderBuffer);
+      }
+      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.framebuffer);
+      this.renderBuffer = this.gl.createRenderbuffer();
+      this.gl.bindRenderbuffer(this.gl.RENDERBUFFER, this.renderBuffer);
+      this.gl.renderbufferStorage(
+        this.gl.RENDERBUFFER,
+        this.gl.DEPTH_COMPONENT32F,
+        width,
+        height
+      );
+      this.gl.framebufferRenderbuffer(
+        this.gl.FRAMEBUFFER,
+        this.gl.DEPTH_ATTACHMENT,
+        this.gl.RENDERBUFFER,
+        this.renderBuffer
+      );
+    }
   }
 
   public setAttachments(textures: GenericTexture2D[]): void {

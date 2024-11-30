@@ -315,7 +315,7 @@ export interface CreateTextureInputFromHTMLImage
 export class Texture2D implements GenericTexture2D {
   public readonly handle: WebGLTexture;
   public constructor(
-    gl: WebGL2RenderingContext,
+    private readonly gl: WebGL2RenderingContext,
     input:
       | CreateTextureInputFromArrayBufferView
       | CreateTextureInputFromHTMLImage
@@ -386,5 +386,9 @@ export class Texture2D implements GenericTexture2D {
 
   public getHandle(): unknown {
     return this.handle;
+  }
+
+  public free(): void {
+    this.gl.deleteTexture(this.handle);
   }
 }

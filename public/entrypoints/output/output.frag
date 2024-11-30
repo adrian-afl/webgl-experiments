@@ -9,8 +9,9 @@ in vec2 uv;
 out vec4 outColor;
 
 void main() {
-  outColor = vec4(
-  mix(texture(colorTexture, uv).rgb, vec3(1.0), texture(distanceTexture, uv).r),
-  1.0
-  );
+  //  outColor = vec4(
+  //  mix(texture(colorTexture, uv).rgb, vec3(1.0), texture(distanceTexture, uv).r),
+  //  1.0
+  //  );
+  outColor = vec4(texture(colorTexture, uv).rgb, 1.0);
 }

@@ -2,9 +2,9 @@ export type MaybePromise<T> = Promise<T> | T;
 
 export type GenericShaderUniformType = "int" | "uint" | "float";
 export interface GenericShaderUniformVectorArrayType {
-  int: Int32Array;
-  uint: Uint32Array;
-  float: Float32Array;
+  int: Int32List;
+  uint: Uint32List;
+  float: Float32List;
 }
 
 export interface GenericGeometry {
@@ -54,6 +54,7 @@ export interface GenericFramebuffer extends GenericDefaultFramebuffer {
 
 export interface GenericTexture2D {
   getHandle(): unknown;
+  free(): void;
 }
 
 export interface GenericShaderProgram<T extends Record<string, true>> {
@@ -80,7 +81,7 @@ export interface GenericShaderProgram<T extends Record<string, true>> {
     name: Extract<keyof T, string>,
     dimensionsBoth: 2 | 3 | 4,
     transpose: boolean,
-    values: Float32Array
+    values: Float32List
   ): void;
 }
 
