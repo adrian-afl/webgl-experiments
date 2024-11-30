@@ -2,7 +2,9 @@ import {
   DefaultFramebuffer,
   Framebuffer,
   Texture2D,
+  TextureInput2DParameters,
 } from "../GPUApiInterface.ts";
+import { genericToWebGLMappers } from "./WebGLTexture2D.ts";
 
 export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
   public readonly handle: WebGLFramebuffer | null = null;
@@ -53,6 +55,8 @@ export class WebGLFramebufferClass
   public override readonly handle: WebGLFramebuffer;
   private framebuffer: WebGLFramebuffer;
   private renderBuffer: WebGLRenderbuffer | null = null;
+  private renderBuffersParameters: TextureInput2DParameters[] = [];
+
   public constructor(
     gl: WebGL2RenderingContext,
     width: number,
@@ -112,9 +116,10 @@ export class WebGLFramebufferClass
     }
   }
 
-  public setAttachments(textures: Texture2D[]): void {
+  public async setAttachments(textures: Texture2D[]): Promise<void> {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.handle);
     const buffers: GLenum[] = [];
+    this.renderBuffersParameters = [];
     for (let i = 0; i < textures.length; i++) {
       this.gl.framebufferTexture2D(
         this.gl.FRAMEBUFFER,
@@ -124,6 +129,7 @@ export class WebGLFramebufferClass
         0
       );
       buffers.push(this.gl.COLOR_ATTACHMENT0 + i);
+      this.renderBuffersParameters.push(await textures[i].getParameters());
     }
 
     this.gl.drawBuffers(buffers);
@@ -134,5 +140,33 @@ export class WebGLFramebufferClass
     ) {
       throw new Error("framebufferTexture2D failed, not complete");
     }
+  }
+
+  public readPixels(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slot: number,
+    destination: ArrayBufferView,
+    destinationOffset: number
+  ): void {
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.handle);
+    this.gl.readBuffer(this.gl.COLOR_ATTACHMENT0 + slot);
+    const parameters = this.renderBuffersParameters[slot];
+    const format = genericToWebGLMappers.format(
+      parameters.dimensions,
+      parameters.format
+    );
+    this.gl.readPixels(
+      x,
+      y,
+      width,
+      height,
+      format.format,
+      format.type,
+      destination,
+      destinationOffset
+    );
   }
 }

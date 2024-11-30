@@ -7,10 +7,10 @@ export interface ShaderUniformVectorArrayType {
   float: Float32List;
 }
 
-export interface CreateTextureInput2D {
+export interface TextureInput2DParameters {
   width: number;
   height: number;
-  mipmap: boolean;
+  mipmap?: boolean;
   dimensions: 1 | 2 | 3 | 4;
   format:
     | "int8"
@@ -21,19 +21,18 @@ export interface CreateTextureInput2D {
     | "uint32"
     | "float16"
     | "float32";
-  minFilter: "nearest" | "linear" | "mipmap-linear";
-  magFilter: "nearest" | "linear";
-  wrapX: "clamp" | "repeat" | "mirrored-repeat";
-  wrapY: "clamp" | "repeat" | "mirrored-repeat";
-  data: ArrayBufferView | null;
+  minFilter?: "nearest" | "linear" | "mipmap-linear";
+  magFilter?: "nearest" | "linear";
+  wrapX?: "clamp" | "repeat" | "mirrored-repeat";
+  wrapY?: "clamp" | "repeat" | "mirrored-repeat";
 }
 
 export interface LoadTextureInput2D {
-  mipmap: boolean;
-  minFilter: "nearest" | "linear" | "mipmap-linear";
-  magFilter: "nearest" | "linear";
-  wrapX: "clamp" | "repeat" | "mirrored-repeat";
-  wrapY: "clamp" | "repeat" | "mirrored-repeat";
+  mipmap?: boolean;
+  minFilter?: "nearest" | "linear" | "mipmap-linear";
+  magFilter?: "nearest" | "linear";
+  wrapX?: "clamp" | "repeat" | "mirrored-repeat";
+  wrapY?: "clamp" | "repeat" | "mirrored-repeat";
 }
 
 export interface Geometry {
@@ -50,10 +49,21 @@ export interface DefaultFramebuffer {
 
 export interface Framebuffer extends DefaultFramebuffer {
   setAttachments(textures: Texture2D[]): MaybePromise<void>;
+  readPixels(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    slot: number,
+    destination: ArrayBufferView,
+    destinationOffset: number
+  ): void;
 }
 
 export interface Texture2D {
   getHandle(): MaybePromise<unknown>;
+  getParameters(): MaybePromise<TextureInput2DParameters>;
+  getByteSize(): number;
   free(): MaybePromise<void>;
 }
 
@@ -95,7 +105,10 @@ export interface GPUApiInterface {
     uniforms: T
   ): MaybePromise<ShaderProgram<T>>;
 
-  createTexture2D(params: CreateTextureInput2D): MaybePromise<Texture2D>;
+  createTexture2D(
+    params: TextureInput2DParameters,
+    data?: ArrayBufferView | null
+  ): MaybePromise<Texture2D>;
   loadTexture2D(
     file: string,
     params: LoadTextureInput2D

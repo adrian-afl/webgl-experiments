@@ -1,6 +1,5 @@
 import { loadObjFileAsSingleGeometry } from "../../media/loadObjFile.ts";
 import {
-  CreateTextureInput2D,
   DefaultFramebuffer,
   Framebuffer,
   GPUApiInterface,
@@ -9,6 +8,7 @@ import {
   MaybePromise,
   ShaderProgram,
   Texture2D,
+  TextureInput2DParameters,
 } from "../GPUApiInterface.ts";
 import {
   WebGLDefaultFramebuffer,
@@ -17,30 +17,7 @@ import {
 import { WebGLGeometry } from "./WebGLGeometry.ts";
 import { WebGLShaderProgram } from "./WebGLShaderProgram.ts";
 import { WebGLTexture2D, genericToWebGLMappers } from "./WebGLTexture2D.ts";
-import { CreateTextureInputBaseWithoutFormats } from "./WebGLTexture2D.ts";
 import { loadAndResolveShaderSource } from "./loadAndResolveShaderSource.ts";
-
-function loadTextureFromImage(
-  gl: WebGL2RenderingContext,
-  url: string,
-  parameters: CreateTextureInputBaseWithoutFormats
-): Promise<WebGLTexture2D> {
-  return new Promise<WebGLTexture2D>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const texture = new WebGLTexture2D(gl, {
-        format: gl.RGBA,
-        type: gl.UNSIGNED_BYTE,
-        internalFormat: gl.RGBA,
-        ...parameters,
-        data: image,
-      });
-      resolve(texture);
-    };
-    image.onerror = reject;
-    image.src = url;
-  });
-}
 
 export class WebGLApiImplementation implements GPUApiInterface {
   private readonly defaultFramebuffer: WebGLDefaultFramebuffer;
@@ -74,10 +51,17 @@ export class WebGLApiImplementation implements GPUApiInterface {
     if (fileRequest.headers.get("Content-type") === "text/html") {
       throw new Error(`Failed loading mesh ${file}, got html`);
     }
-    const fileContent = await fileRequest.text();
+    if (file.endsWith(".obj")) {
+      const fileContent = await fileRequest.text();
 
-    const objFileData = loadObjFileAsSingleGeometry(fileContent);
-    return this.createGeometry(objFileData.intermediate.getVertexArray());
+      const objFileData = loadObjFileAsSingleGeometry(fileContent);
+      return this.createGeometry(objFileData.intermediate.getVertexArray());
+    } else if (file.endsWith(".raw")) {
+      const fileContent = new Float32Array(await fileRequest.arrayBuffer());
+      return this.createGeometry(fileContent);
+    } else {
+      throw new Error(`Unsupported model type for file ${file}`);
+    }
   }
 
   public async createShader<T extends Record<string, true>>(
@@ -92,24 +76,25 @@ export class WebGLApiImplementation implements GPUApiInterface {
   }
 
   public createTexture2D(
-    params: CreateTextureInput2D
+    params: TextureInput2DParameters,
+    data?: ArrayBufferView | null
   ): MaybePromise<Texture2D> {
     const mappedFormats = genericToWebGLMappers.format(
       params.dimensions,
       params.format
     );
-    return new WebGLTexture2D(this.gl, {
-      data: params.data,
+    return new WebGLTexture2D(this.gl, params, {
+      data: data ?? null,
       width: params.width,
       height: params.height,
-      mipmap: params.mipmap,
+      mipmap: params.mipmap ?? false,
       internalFormat: mappedFormats.internalFormat,
       type: mappedFormats.type,
       format: mappedFormats.format,
-      magFilter: genericToWebGLMappers.magFilter(params.magFilter),
-      minFilter: genericToWebGLMappers.minFilter(params.minFilter),
-      wrapS: genericToWebGLMappers.wrapX(params.wrapX),
-      wrapT: genericToWebGLMappers.wrapY(params.wrapY),
+      magFilter: genericToWebGLMappers.magFilter(params.magFilter ?? "nearest"),
+      minFilter: genericToWebGLMappers.minFilter(params.minFilter ?? "nearest"),
+      wrapS: genericToWebGLMappers.wrapX(params.wrapX ?? "clamp"),
+      wrapT: genericToWebGLMappers.wrapY(params.wrapY ?? "clamp"),
     });
   }
 
@@ -117,12 +102,37 @@ export class WebGLApiImplementation implements GPUApiInterface {
     file: string,
     params: LoadTextureInput2D
   ): MaybePromise<Texture2D> {
-    return loadTextureFromImage(this.gl, file, {
-      mipmap: params.mipmap,
-      magFilter: genericToWebGLMappers.magFilter(params.magFilter),
-      minFilter: genericToWebGLMappers.minFilter(params.minFilter),
-      wrapS: genericToWebGLMappers.wrapX(params.wrapX),
-      wrapT: genericToWebGLMappers.wrapY(params.wrapY),
+    const webglParams = {
+      mipmap: params.mipmap ?? true,
+      magFilter: genericToWebGLMappers.magFilter(params.magFilter ?? "linear"),
+      minFilter: genericToWebGLMappers.minFilter(params.minFilter ?? "linear"),
+      wrapS: genericToWebGLMappers.wrapX(params.wrapX ?? "repeat"),
+      wrapT: genericToWebGLMappers.wrapY(params.wrapY ?? "repeat"),
+    };
+    return new Promise<WebGLTexture2D>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        const texture = new WebGLTexture2D(
+          this.gl,
+          {
+            ...params,
+            width: image.width,
+            height: image.height,
+            dimensions: 4,
+            format: "uint8",
+          },
+          {
+            format: this.gl.RGBA,
+            type: this.gl.UNSIGNED_BYTE,
+            internalFormat: this.gl.RGBA,
+            ...webglParams,
+            data: image,
+          }
+        );
+        resolve(texture);
+      };
+      image.onerror = reject;
+      image.src = file;
     });
   }
 
