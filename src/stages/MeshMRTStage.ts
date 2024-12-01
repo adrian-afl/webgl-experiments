@@ -11,7 +11,8 @@ export class MeshMRTStage {
   private meshProgram!: ShaderProgram<{
     colorTexture: true;
     elapsed: true;
-    perspectiveViewMatrix: true;
+    perspectiveMatrix: true;
+    viewMatrix: true;
     modelMatrix: true;
   }>;
   private framebuffer!: Framebuffer;
@@ -27,9 +28,10 @@ export class MeshMRTStage {
       {
         colorTexture: true,
         elapsed: true,
-        perspectiveViewMatrix: true,
+        perspectiveMatrix: true,
+        viewMatrix: true,
         modelMatrix: true,
-      }
+      } as const
     );
 
     const defaultFramebuffer = await this.api.getDefaultFramebuffer();

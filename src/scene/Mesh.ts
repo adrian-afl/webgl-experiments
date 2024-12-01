@@ -29,6 +29,10 @@ export class Mesh {
     await this.geometry.draw();
   }
 
+  public async drawDistance(): Promise<void> {
+    await this.geometry.draw();
+  }
+
   private updateModelMatrix(cameraPosition: vec3): void {
     vec3.sub(glmTemp.vec3[0], this.position, cameraPosition);
     mat4.fromRotationTranslationScale(

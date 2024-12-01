@@ -1,17 +1,16 @@
 import { mat4, quat, vec3 } from "gl-matrix";
 
-import { glmTemp } from "../glmTemporaryPools.ts";
 import { ShaderProgram } from "../gpu/GPUApiInterface.ts";
 
 export class Camera {
   private readonly perspectiveMatrix: mat4;
-  private readonly perspectiveViewMatrix: mat4;
+  private readonly viewMatrix: mat4;
   public readonly position: vec3;
   public readonly orientation: quat;
 
   public constructor() {
     this.perspectiveMatrix = mat4.create();
-    this.perspectiveViewMatrix = mat4.create();
+    this.viewMatrix = mat4.create();
     this.position = vec3.create();
     this.orientation = quat.create();
   }
@@ -36,24 +35,20 @@ export class Camera {
     mat4.ortho(this.perspectiveMatrix, left, right, top, bottom, near, far);
   }
 
-  private updatePerspectiveViewMatrix(): void {
-    mat4.fromQuat(glmTemp.mat4[0], this.orientation);
-    mat4.mul(
-      this.perspectiveViewMatrix,
-      this.perspectiveMatrix,
-      glmTemp.mat4[0]
-    );
+  private updateMatrices(): void {
+    mat4.fromQuat(this.viewMatrix, this.orientation);
   }
 
   public async setUniforms(
-    shader: ShaderProgram<{ perspectiveViewMatrix: true }>
+    shader: ShaderProgram<{ perspectiveMatrix: true; viewMatrix: true }>
   ): Promise<void> {
-    this.updatePerspectiveViewMatrix();
+    this.updateMatrices();
     await shader.setUniformMatrixArray(
-      "perspectiveViewMatrix",
+      "perspectiveMatrix",
       4,
       false,
-      this.perspectiveViewMatrix
+      this.perspectiveMatrix
     );
+    await shader.setUniformMatrixArray("viewMatrix", 4, false, this.viewMatrix);
   }
 }
