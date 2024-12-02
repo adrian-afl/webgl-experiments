@@ -96,6 +96,12 @@ export interface ShaderProgram<T extends Record<string, true>> {
 }
 
 export interface GPUApiInterface {
+  initialize(
+    canvas: HTMLCanvasElement,
+    outputWidth: number,
+    outputHeight: number,
+    withDepth: boolean
+  ): MaybePromise<void>;
   createGeometry(data: Float32Array): MaybePromise<Geometry>;
   loadGeometry(file: string): MaybePromise<Geometry>;
 

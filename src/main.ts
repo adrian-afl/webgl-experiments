@@ -1,7 +1,6 @@
 import { quat, vec3 } from "gl-matrix";
 
 import { WebGLApiImplementation } from "./gpu/webgl/WebGLApiImplementation.ts";
-import { checkGLError } from "./gpu/webgl/checkGLError.ts";
 import { Camera } from "./scene/Camera.ts";
 import { Mesh } from "./scene/Mesh.ts";
 import { MeshMRTStage } from "./stages/MeshMRTStage.ts";
@@ -16,17 +15,12 @@ if (document.location.search.includes("debug=true")) {
 }
 
 async function initWebGL2(): Promise<void> {
-  const canvas = document.createElement("canvas"); // creates a new canvas element ( <canvas></canvas> )
+  const canvas = document.createElement("canvas");
   canvas.width = 1024;
   canvas.height = 1024;
-  document.body.appendChild(canvas); // appends/adds the canvas element to the document's body
-  const gl = canvas.getContext("webgl2"); // creates a WebGL2 context, using the canvas
+  document.body.appendChild(canvas);
 
-  if (!gl) {
-    throw new Error("No WEBGL2 support");
-  }
-
-  const api = new WebGLApiImplementation(gl, 1024, 1024, false);
+  const api = new WebGLApiImplementation(canvas, 1024, 1024, false);
 
   const dingusGeometry = await api.loadGeometry("dingus.obj");
   const dingusTexture = await api.loadTexture2D("dingus.jpg", {});
@@ -88,7 +82,7 @@ async function initWebGL2(): Promise<void> {
 
     await handleResizing(false);
 
-    checkGLError(gl);
+    // checkGLError(gl);
 
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     requestAnimationFrame(loop);

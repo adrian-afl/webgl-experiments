@@ -19,35 +19,42 @@ import { WebGLShaderProgram } from "./WebGLShaderProgram.ts";
 import { WebGLTexture2D, genericToWebGLMappers } from "./WebGLTexture2D.ts";
 import { loadAndResolveShaderSource } from "./loadAndResolveShaderSource.ts";
 
-export class WebGLApiImplementation implements GPUApiInterface {
-  private defaultFramebuffer!: WebGLDefaultFramebuffer;
-  private gl!: WebGL2RenderingContext;
+export class WebGPUApiImplementation implements GPUApiInterface {
+  // private readonly defaultFramebuffer: WebGLDefaultFramebuffer;
+  private adapter!: GPUAdapter;
+  private device!: GPUDevice;
+  private context!: GPUCanvasContext;
 
-  public initialize(
+  public async initialize(
     canvas: HTMLCanvasElement,
     outputWidth: number,
     outputHeight: number,
     withDepth: boolean
-  ): void {
-    const gl = canvas.getContext("webgl2");
-
-    if (!gl) {
-      throw new Error("No WEBGL2 support");
+  ): Promise<void> {
+    const adapter = await navigator.gpu?.requestAdapter();
+    if (!adapter) {
+      throw new Error("Unable to get an adapter");
     }
-    this.gl = gl;
-
-    if (!this.gl.getExtension("EXT_color_buffer_float")) {
-      throw new Error("Rendering to floating point textures not supported");
+    const device = await adapter?.requestDevice();
+    if (!device) {
+      throw new Error("Unable to get a device");
     }
-    this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-    this.gl.enable(this.gl.CULL_FACE);
-    this.gl.cullFace(this.gl.BACK);
-    this.defaultFramebuffer = new WebGLDefaultFramebuffer(
-      this.gl,
-      outputWidth,
-      outputHeight,
-      withDepth
-    );
+
+    device.lost.then((reason) => {
+      //eslint-disable-next-line
+      throw new Error(`Device lost ${reason.reason}: ${reason.message}`);
+    });
+
+    device.onuncapturederror = (ev) => {
+      //eslint-disable-next-line
+      throw new Error(`Uncaptured error: ${ev.error.message}`);
+    };
+
+    const context = canvas.getContext("webgpu") as GPUCanvasContext;
+
+    this.adapter = adapter;
+    this.device = device;
+    this.context = context;
   }
 
   public createGeometry(data: Float32Array): MaybePromise<Geometry> {

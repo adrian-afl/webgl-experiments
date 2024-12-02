@@ -4,3 +4,6 @@
     This would in turn allow me to:
       - define a common rendering api that could be implemented in a variety of ways, not neccesarily via network
       - work on my stupid mac even after I switch to c++
+
+
+yo check this out https://github.com/webgpu/webgpu-samples/blob/main/sample/texturedCube/main.ts
