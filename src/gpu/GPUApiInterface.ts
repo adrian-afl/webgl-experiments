@@ -45,6 +45,7 @@ export interface DefaultFramebuffer {
   bind(): MaybePromise<void>;
   resize(width: number, height: number): MaybePromise<void>;
   getSize(): MaybePromise<{ width: number; height: number }>;
+  unbind(): void;
 }
 
 export interface Framebuffer extends DefaultFramebuffer {

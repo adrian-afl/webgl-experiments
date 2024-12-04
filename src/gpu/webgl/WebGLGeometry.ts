@@ -46,14 +46,6 @@ function createGeometry(
   };
 }
 
-export function drawGeometry(
-  gl: WebGL2RenderingContext,
-  mesh: GLGeometryCreateResult
-): void {
-  gl.bindVertexArray(mesh.vao);
-  gl.drawArrays(gl.TRIANGLES, 0, mesh.vertexCount);
-}
-
 export class WebGLGeometry implements Geometry {
   private createdGeometry: GLGeometryCreateResult | null;
 

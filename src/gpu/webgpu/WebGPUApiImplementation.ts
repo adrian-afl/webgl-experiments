@@ -17,13 +17,16 @@ import {
 import { WebGLGeometry } from "./WebGLGeometry.ts";
 import { WebGLShaderProgram } from "./WebGLShaderProgram.ts";
 import { WebGLTexture2D, genericToWebGLMappers } from "./WebGLTexture2D.ts";
+import { WebGPUImmediateContext } from "./WebGPUImmediateContext.ts";
 import { loadAndResolveShaderSource } from "./loadAndResolveShaderSource.ts";
 
 export class WebGPUApiImplementation implements GPUApiInterface {
   // private readonly defaultFramebuffer: WebGLDefaultFramebuffer;
-  private adapter!: GPUAdapter;
-  private device!: GPUDevice;
-  private context!: GPUCanvasContext;
+  public adapter!: GPUAdapter;
+  public device!: GPUDevice;
+  public context!: GPUCanvasContext;
+
+  private readonly currentDrawingContext: WebGPUImmediateContext;
 
   public async initialize(
     canvas: HTMLCanvasElement,
@@ -31,26 +34,38 @@ export class WebGPUApiImplementation implements GPUApiInterface {
     outputHeight: number,
     withDepth: boolean
   ): Promise<void> {
-    const adapter = await navigator.gpu?.requestAdapter();
+    const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) {
       throw new Error("Unable to get an adapter");
     }
-    const device = await adapter?.requestDevice();
+    const device = await adapter.requestDevice();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!device) {
       throw new Error("Unable to get a device");
     }
 
-    device.lost.then((reason) => {
-      //eslint-disable-next-line
+    void device.lost.then((reason) => {
       throw new Error(`Device lost ${reason.reason}: ${reason.message}`);
     });
 
     device.onuncapturederror = (ev) => {
-      //eslint-disable-next-line
       throw new Error(`Uncaptured error: ${ev.error.message}`);
     };
 
-    const context = canvas.getContext("webgpu") as GPUCanvasContext;
+    const context = canvas.getContext("webgpu");
+    if (!context) {
+      throw new Error("Unable to get the webgpu context");
+    }
+
+    const devicePixelRatio = window.devicePixelRatio;
+    canvas.width = canvas.clientWidth * devicePixelRatio;
+    canvas.height = canvas.clientHeight * devicePixelRatio;
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+      device,
+      format: presentationFormat,
+    });
 
     this.adapter = adapter;
     this.device = device;

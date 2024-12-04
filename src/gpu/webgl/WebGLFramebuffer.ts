@@ -8,6 +8,7 @@ import { genericToWebGLMappers } from "./WebGLTexture2D.ts";
 
 export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
   public readonly handle: WebGLFramebuffer | null = null;
+  private inProgress = false;
   public constructor(
     protected readonly gl: WebGL2RenderingContext,
     protected width: number,
@@ -26,6 +27,10 @@ export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
   }
 
   public bind(): void {
+    if (this.inProgress) {
+      throw new Error("Binding already bound framebuffer");
+    }
+    this.inProgress = true;
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.handle);
     this.gl.viewport(0, 0, this.width, this.height);
     if (this.withDepth) {
@@ -33,6 +38,15 @@ export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
     } else {
       this.gl.disable(this.gl.DEPTH_TEST);
     }
+  }
+
+  public unbind(): void {
+    // this doesnt do anything but its for webgpu compatibility
+    if (!this.inProgress) {
+      throw new Error("Unbinding not bound framebuffer");
+    }
+    this.inProgress = false;
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
   }
 
   public resize(width: number, height: number): void {
