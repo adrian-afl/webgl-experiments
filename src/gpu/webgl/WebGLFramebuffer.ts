@@ -8,7 +8,7 @@ import { genericToWebGLMappers } from "./WebGLTexture2D.ts";
 
 export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
   public readonly handle: WebGLFramebuffer | null = null;
-  private inProgress = false;
+
   public constructor(
     protected readonly gl: WebGL2RenderingContext,
     protected width: number,
@@ -27,11 +27,8 @@ export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
   }
 
   public bind(): void {
-    if (this.inProgress) {
-      throw new Error("Binding already bound framebuffer");
-    }
-    this.inProgress = true;
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.handle);
+    this.gl.disable(this.gl.BLEND);
     this.gl.viewport(0, 0, this.width, this.height);
     if (this.withDepth) {
       this.gl.enable(this.gl.DEPTH_TEST);
@@ -40,13 +37,14 @@ export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
     }
   }
 
-  public unbind(): void {
-    // this doesnt do anything but its for webgpu compatibility
-    if (!this.inProgress) {
-      throw new Error("Unbinding not bound framebuffer");
+  public setBlending(blending: "none" | "add"): void {
+    if (blending === "none") {
+      this.gl.disable(this.gl.BLEND);
     }
-    this.inProgress = false;
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+    if (blending === "add") {
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendEquation(this.gl.FUNC_ADD);
+    }
   }
 
   public resize(width: number, height: number): void {

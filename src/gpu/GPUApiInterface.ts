@@ -43,9 +43,9 @@ export interface Geometry {
 export interface DefaultFramebuffer {
   clear(color: number[] & { length: 4 }, depth?: number): MaybePromise<void>;
   bind(): MaybePromise<void>;
+  setBlending(blending: "none" | "add"): MaybePromise<void>;
   resize(width: number, height: number): MaybePromise<void>;
   getSize(): MaybePromise<{ width: number; height: number }>;
-  unbind(): void;
 }
 
 export interface Framebuffer extends DefaultFramebuffer {

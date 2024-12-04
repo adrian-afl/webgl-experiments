@@ -7,6 +7,13 @@ import {
 import { Camera } from "../scene/Camera.ts";
 import { Mesh } from "../scene/Mesh.ts";
 
+export interface MRTTextures {
+  color: Texture2D;
+  distance: Texture2D;
+  worldPos: Texture2D;
+  normal: Texture2D;
+}
+
 export class MeshMRTStage {
   private meshProgram!: ShaderProgram<{
     colorTexture: true;
@@ -18,6 +25,8 @@ export class MeshMRTStage {
   private framebuffer!: Framebuffer;
   private colorTexture!: Texture2D;
   private distanceTexture!: Texture2D;
+  private worldPosTexture!: Texture2D;
+  private normalTexture!: Texture2D;
 
   public constructor(private readonly api: GPUApiInterface) {}
 
@@ -61,9 +70,23 @@ export class MeshMRTStage {
       dimensions: 1,
     });
 
+    this.worldPosTexture = await this.api.createTexture2D({
+      ...framebufferSize,
+      format: "float32",
+      dimensions: 4,
+    });
+
+    this.normalTexture = await this.api.createTexture2D({
+      ...framebufferSize,
+      format: "float32",
+      dimensions: 4,
+    });
+
     await this.framebuffer.setAttachments([
       this.colorTexture,
       this.distanceTexture,
+      this.worldPosTexture,
+      this.normalTexture,
     ]);
   }
 
@@ -73,6 +96,8 @@ export class MeshMRTStage {
     await this.framebuffer.resize(size.width, size.height);
     await this.colorTexture.free();
     await this.distanceTexture.free();
+    await this.worldPosTexture.free();
+    await this.normalTexture.free();
     await this.createTextures();
   }
 
@@ -93,10 +118,12 @@ export class MeshMRTStage {
     }
   }
 
-  public getOutputs(): {
-    color: Texture2D;
-    distance: Texture2D;
-  } {
-    return { color: this.colorTexture, distance: this.distanceTexture };
+  public getOutputs(): MRTTextures {
+    return {
+      color: this.colorTexture,
+      distance: this.distanceTexture,
+      worldPos: this.worldPosTexture,
+      normal: this.normalTexture,
+    };
   }
 }

@@ -1,11 +1,16 @@
 import { quat, vec3 } from "gl-matrix";
+import * as test from "node:test";
 
+import { glmTemp } from "./glmTemporaryPools.ts";
+import { GPUApiInterface } from "./gpu/GPUApiInterface.ts";
 import { WebGLApiImplementation } from "./gpu/webgl/WebGLApiImplementation.ts";
 import { Camera } from "./scene/Camera.ts";
 import { Mesh } from "./scene/Mesh.ts";
+import { SpotLight } from "./scene/SpotLight.ts";
+import { MeshDeferredLightingStage } from "./stages/MeshDeferredLightingStage.ts";
 import { MeshMRTStage } from "./stages/MeshMRTStage.ts";
 import { OutputStage } from "./stages/OutputStage.ts";
-import { lookAlongQuat } from "./util/lookAtQuat.ts";
+import { lookAlongQuat, lookAtQuat } from "./util/lookAtQuat.ts";
 
 if (document.location.search.includes("debug=true")) {
   void import("spectorjs").then((imported) => {
@@ -20,17 +25,24 @@ async function initWebGL2(): Promise<void> {
   canvas.height = 1024;
   document.body.appendChild(canvas);
 
-  const api = new WebGLApiImplementation(canvas, 1024, 1024, false);
+  const api = new WebGLApiImplementation() as GPUApiInterface;
+  await api.initialize(canvas, 1024, 1024, false);
 
   const dingusGeometry = await api.loadGeometry("dingus.obj");
   const dingusTexture = await api.loadTexture2D("dingus.jpg", {});
   const dingusMesh = new Mesh(dingusGeometry, dingusTexture);
 
-  const scene = [dingusMesh];
+  const groundGeometry = await api.loadGeometry("ground.obj");
+  const groundMesh = new Mesh(groundGeometry, dingusTexture);
+
+  const scene = [dingusMesh, groundMesh];
 
   const meshStage = new MeshMRTStage(api);
   await meshStage.initialize();
   let meshStageOutputs = meshStage.getOutputs();
+
+  const meshDeferredLightingState = new MeshDeferredLightingStage(api);
+  await meshDeferredLightingState.initialize();
 
   const outputStage = new OutputStage(api);
   await outputStage.initialize();
@@ -68,6 +80,15 @@ async function initWebGL2(): Promise<void> {
 
   const vec3Up: vec3 = [0, 1, 0];
 
+  const lights: SpotLight[] = [];
+  const testLight = new SpotLight();
+  // testLight.setPerspective(70, 1.0, 0.1, 10.0);
+  testLight.setOrthographic(-10.0, 10.0, 10.0, -10.0, 0.0, 10.0);
+
+  vec3.set(testLight.position, 0, 5.0, 0);
+  lookAlongQuat(testLight.orientation, [0, -0.4, 0.76], vec3Up);
+  lights.push(testLight);
+
   const loop = async (): Promise<void> => {
     const elapsed = (Date.now() - startTime) / 1000.0;
 
@@ -75,8 +96,15 @@ async function initWebGL2(): Promise<void> {
 
     await meshStage.draw(camera, scene, { elapsed });
 
+    await meshDeferredLightingState.draw(
+      camera,
+      lights,
+      scene,
+      meshStage.getOutputs()
+    );
+
     await outputStage.draw({
-      colorTexture: meshStageOutputs.color,
+      colorTexture: meshDeferredLightingState.getOutput(),
       distanceTexture: meshStageOutputs.distance,
     });
 

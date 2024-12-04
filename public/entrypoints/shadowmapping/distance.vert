@@ -10,11 +10,6 @@ in vec2 inUV;
 in vec3 inNormal;
 in vec4 inTangent;
 
-out float distance;
-
 void main() {
-  vec3 cameraSpace = modelMatrix * vec4(inVertexPos, 1.0);
-  distance = length(cameraSpace.xyz);
-
-  gl_Position = vec4(perspectiveMatrix * cameraSpace);
+  gl_Position = vec4(perspectiveMatrix * viewMatrix * modelMatrix * vec4(inVertexPos, 1.0));
 }
