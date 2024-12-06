@@ -102,7 +102,12 @@ async function initWebGL2(): Promise<void> {
 
     await meshStage.draw(camera, scene, { elapsed });
 
-    await ico.draw([0, 0, 0], dingusMesh.orientation, 1, camera);
+    quat.setAxisAngle(glmTemp.quat[0], [0, 1, 0], -elapsed * 0.5);
+    quat.setAxisAngle(glmTemp.quat[1], [1, 0, 0], -elapsed * 0.2);
+    quat.setAxisAngle(glmTemp.quat[2], [0, 0, 1], elapsed * 0.3);
+    quat.mul(glmTemp.quat[1], glmTemp.quat[1], glmTemp.quat[0]);
+    quat.mul(glmTemp.quat[1], glmTemp.quat[1], glmTemp.quat[2]);
+    await ico.draw([0, 0, 0], glmTemp.quat[1], 1, camera);
 
     await meshDeferredLightingState.draw(
       camera,

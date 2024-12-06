@@ -51,6 +51,19 @@ export class Object3dIntermediate {
     return arr;
   }
 
+  public getTriangles(): vec3[][] {
+    const triangles: vec3[][] = [];
+    const verticesCount = this.vertices.length;
+    for (let i = 0; i < verticesCount; i += 3) {
+      triangles.push([
+        this.vertices[i].position,
+        this.vertices[i + 1].position,
+        this.vertices[i + 2].position,
+      ]);
+    }
+    return triangles;
+  }
+
   // vengine port, from 2015, i have forgotten how it works
   public recalculateTangents(): void {
     const t1a: vec3[] = new Array<vec3>();

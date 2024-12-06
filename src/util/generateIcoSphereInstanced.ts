@@ -8,6 +8,7 @@ import * as path from "node:path";
 
 import { glmTemp } from "../glmTemporaryPools.ts";
 import { Object3dIntermediate, Vertex } from "../media/Object3dIntermediate.ts";
+import { loadObjFileAsSingleGeometry } from "../media/loadObjFile.ts";
 import { lookAlongQuat } from "./lookAtQuat.ts";
 
 import normalFromMat4 = module;
@@ -20,108 +21,11 @@ export interface GenerateIcoSphereInput {
 type FixedArray<T, L> = T[] & { length: L };
 type Triangle = FixedArray<vec3, 3>;
 
-const baseTriangles: Triangle[] = [
-  [
-    [-1, 1.618033988749895, 0],
-    [-1.618033988749895, 0, 1],
-    [0, 1, 1.618033988749895],
-  ],
-  [
-    [-1, 1.618033988749895, 0],
-    [0, 1, 1.618033988749895],
-    [1, 1.618033988749895, 0],
-  ],
-  [
-    [-1, 1.618033988749895, 0],
-    [1, 1.618033988749895, 0],
-    [0, 1, -1.618033988749895],
-  ],
-  [
-    [-1, 1.618033988749895, 0],
-    [0, 1, -1.618033988749895],
-    [-1.618033988749895, 0, -1],
-  ],
-  [
-    [-1, 1.618033988749895, 0],
-    [-1.618033988749895, 0, -1],
-    [-1.618033988749895, 0, 1],
-  ],
-  [
-    [1, 1.618033988749895, 0],
-    [0, 1, 1.618033988749895],
-    [1.618033988749895, 0, 1],
-  ],
-  [
-    [0, 1, 1.618033988749895],
-    [-1.618033988749895, 0, 1],
-    [0, -1, 1.618033988749895],
-  ],
-  [
-    [-1.618033988749895, 0, 1],
-    [-1.618033988749895, 0, -1],
-    [-1, -1.618033988749895, 0],
-  ],
-  [
-    [-1.618033988749895, 0, -1],
-    [0, 1, -1.618033988749895],
-    [0, -1, -1.618033988749895],
-  ],
-  [
-    [0, 1, -1.618033988749895],
-    [1, 1.618033988749895, 0],
-    [1.618033988749895, 0, -1],
-  ],
-  [
-    [1, -1.618033988749895, 0],
-    [1.618033988749895, 0, 1],
-    [0, -1, 1.618033988749895],
-  ],
-  [
-    [1, -1.618033988749895, 0],
-    [0, -1, 1.618033988749895],
-    [-1, -1.618033988749895, 0],
-  ],
-  [
-    [1, -1.618033988749895, 0],
-    [-1, -1.618033988749895, 0],
-    [0, -1, -1.618033988749895],
-  ],
-  [
-    [1, -1.618033988749895, 0],
-    [0, -1, -1.618033988749895],
-    [1.618033988749895, 0, -1],
-  ],
-  [
-    [1, -1.618033988749895, 0],
-    [1.618033988749895, 0, -1],
-    [1.618033988749895, 0, 1],
-  ],
-  [
-    [0, -1, 1.618033988749895],
-    [1.618033988749895, 0, 1],
-    [0, 1, 1.618033988749895],
-  ],
-  [
-    [-1, -1.618033988749895, 0],
-    [0, -1, 1.618033988749895],
-    [-1.618033988749895, 0, 1],
-  ],
-  [
-    [0, -1, -1.618033988749895],
-    [-1, -1.618033988749895, 0],
-    [-1.618033988749895, 0, -1],
-  ],
-  [
-    [1.618033988749895, 0, -1],
-    [0, -1, -1.618033988749895],
-    [0, 1, -1.618033988749895],
-  ],
-  [
-    [1.618033988749895, 0, 1],
-    [1.618033988749895, 0, -1],
-    [1, 1.618033988749895, 0],
-  ],
-];
+const icoSphere = loadObjFileAsSingleGeometry(
+  fs.readFileSync("public/icosphere-3div.obj").toString()
+);
+
+const baseTriangles = icoSphere.intermediate.getTriangles();
 
 // const tmp1 = vec3.create();
 // const tmp2 = vec3.create();
@@ -164,6 +68,22 @@ function normalizeTriangle(tri: Triangle): void {
   vec3.normalize(tri[0], tri[0]);
   vec3.normalize(tri[1], tri[1]);
   vec3.normalize(tri[2], tri[2]);
+}
+
+function scaleInPlaceTriangle(tri: Triangle, num: number): void {
+  const center = verticesCenter(tri);
+
+  vec3.sub(tri[0], tri[0], center);
+  vec3.sub(tri[1], tri[1], center);
+  vec3.sub(tri[2], tri[2], center);
+
+  vec3.scale(tri[0], tri[0], num);
+  vec3.scale(tri[1], tri[1], num);
+  vec3.scale(tri[2], tri[2], num);
+
+  vec3.add(tri[0], tri[0], center);
+  vec3.add(tri[1], tri[1], center);
+  vec3.add(tri[2], tri[2], center);
 }
 
 function scaleTriangle(tri: Triangle, num: number): void {
@@ -294,6 +214,7 @@ export async function generateIcoSphere(
     aAAbaseTriangle,
     2
   );
+  scaleInPlaceTriangle(aAAbaseTriangle, 0.65);
   const baseTriangle = initiallySubdividedTriangle[0];
   console.log("COUNT HERE", baseTriangle.length);
   for (let level = 0; level < input.levels; level++) {
@@ -303,13 +224,13 @@ export async function generateIcoSphere(
       level * 2
     );
     subdivided.map((x) => {
-      vec3.add(x[0], x[0], [0, 0, 2]);
-      vec3.add(x[1], x[1], [0, 0, 2]);
-      vec3.add(x[2], x[2], [0, 0, 2]);
+      vec3.add(x[0], x[0], [0, 0, 1]);
+      vec3.add(x[1], x[1], [0, 0, 1]);
+      vec3.add(x[2], x[2], [0, 0, 1]);
       normalizeTriangle(x); // is this really a good idea?
-      vec3.sub(x[0], x[0], [0, 0, 2]);
-      vec3.sub(x[1], x[1], [0, 0, 2]);
-      vec3.sub(x[2], x[2], [0, 0, 2]);
+      vec3.sub(x[0], x[0], [0, 0, 1]);
+      vec3.sub(x[1], x[1], [0, 0, 1]);
+      vec3.sub(x[2], x[2], [0, 0, 1]);
     });
     const vertices = subdivided.flat();
 
@@ -351,49 +272,47 @@ export async function generateIcoSphere(
 
   const minDot = -999;
 
-  for (const originalTriangle of baseTriangles) {
+  for (const triangle of baseTriangles) {
+    // normalizeTriangle(originalTriangle);
     process.stdout.write(".");
-    const subTriangles = subdivideTriangleMultipleTimes(originalTriangle, 2); // already divide in many smaller ones
-    for (const triangle of subTriangles) {
-      normalizeTriangle(triangle);
+    // const subTriangles = subdivideTriangleMultipleTimes(originalTriangle, 2); // already divide in many smaller ones
+    // for (const triangle of originalTriangle) {
+    const center = verticesCenter(triangle);
+    vec3.scale(center, center, 1.8);
 
-      const u1 = vec3.sub(glmTemp.vec3[2], triangle[1], triangle[0]);
-      vec3.normalize(u1, u1);
+    const u1 = vec3.sub(glmTemp.vec3[2], triangle[1], triangle[0]);
+    vec3.normalize(u1, u1);
 
-      const v2a = vec3.sub(glmTemp.vec3[3], triangle[2], triangle[1]);
-      vec3.normalize(v2a, v2a);
+    const v2a = vec3.sub(glmTemp.vec3[3], triangle[2], triangle[1]);
+    vec3.normalize(v2a, v2a);
 
-      const n = vec3.cross(glmTemp.vec3[4], u1, v2a);
-      vec3.normalize(n, n);
+    const n = vec3.cross(glmTemp.vec3[4], u1, v2a);
+    vec3.normalize(n, n);
 
-      const v1 = vec3.cross(glmTemp.vec3[6], n, u1);
-      vec3.normalize(v1, v1);
+    const v1 = vec3.cross(glmTemp.vec3[6], n, u1);
+    vec3.normalize(v1, v1);
 
-      const a1 = u1;
-      const a2 = v1;
-      const a3 = n;
+    const a1 = u1;
+    const a2 = v1;
+    const a3 = n;
 
-      const matrix = mat3.fromValues(
-        a1[0],
-        a2[0],
-        a3[0],
+    const matrix = mat3.fromValues(
+      // its already transposed...
+      a1[0],
+      a1[1],
+      a1[2],
 
-        a1[1],
-        a2[1],
-        a3[1],
+      a2[0],
+      a2[1],
+      a2[2],
 
-        a1[2],
-        a2[2],
-        a3[2]
-      );
-      mat3.transpose(matrix, matrix);
+      a3[0],
+      a3[1],
+      a3[2]
+    );
 
-      const center = verticesCenter(triangle);
-      vec3.normalize(center, center);
-      vec3.scale(center, center, 2);
-
-      icoSphere.positionMatrices.push({ center, mat3: matrix });
-    }
+    icoSphere.positionMatrices.push({ center, mat3: matrix });
+    // }
   }
 
   console.log("firstMat", firstMat3);
