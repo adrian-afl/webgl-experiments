@@ -1,4 +1,4 @@
-import { mat3, mat4, quat, vec3 } from "gl-matrix";
+import { mat3, mat4, vec3 } from "gl-matrix";
 
 import { glmTemp } from "../glmTemporaryPools.ts";
 import {
@@ -53,9 +53,9 @@ export class IcosphereDrawer {
     this.loaded = {
       geometries,
       positionMatrices: data.positionMatrices.map(({ center, mat3: m }) => {
-        quat.setAxisAngle(glmTemp.quat[0], [1, 0, 0], Math.PI / 2);
-        mat3.fromQuat(glmTemp.mat3[0], glmTemp.quat[0]);
-        mat3.mul(m, m, glmTemp.mat3[0]);
+        // quat.setAxisAngle(glmTemp.quat[0], [1, 0, 0], Math.PI / 2);
+        // mat3.fromQuat(glmTemp.mat3[0], glmTemp.quat[0]);
+        // mat3.mul(m, m, glmTemp.mat3[0]);
         const tmp = mat4.fromValues(
           m[0],
           m[1],

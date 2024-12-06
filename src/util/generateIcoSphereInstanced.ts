@@ -2,12 +2,15 @@
  Also it would be better to do it in 2 steps - first generate the geometries at various levels, cache it here
  and then use it to create the O3Ds in Three, so the geos are created only once
  */
-import { mat3, vec2, vec3 } from "gl-matrix";
+import { mat3, quat, vec2, vec3 } from "gl-matrix";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { glmTemp } from "../glmTemporaryPools.ts";
 import { Object3dIntermediate, Vertex } from "../media/Object3dIntermediate.ts";
+import { lookAlongQuat } from "./lookAtQuat.ts";
+
+import normalFromMat4 = module;
 
 export interface GenerateIcoSphereInput {
   outDir: string;
@@ -249,16 +252,42 @@ export async function generateIcoSphere(
   const max = vec3.fromValues(-999, -999, -999);
 
   const levelsMeshes: string[] = [];
+  //
+  const aAAbaseTriangle: Triangle = [
+    [0, 1, 0.0],
+    [1.151, -1, 0.0],
+    [-1.151, -1, 0.0],
+    // [-1, 1, 0],
+    // [-1, 0, 0],
+    // [0, 1, 1],
+  ];
+
+  // const aAAbaseTriangle: Triangle = [
+  //   [0, 0, 1.618033988749895],
+  //   [-1, 0, -1],
+  //   [1, 0, -1],
+  // ];
+
+  // const bbbb: Triangle = [
+  //   [-1, 1.618033988749895, 0],
+  //   [-1.618033988749895, 0, 1],
+  //   [0, 1, 1.618033988749895],
+  // ];
+
   const initiallySubdividedTriangle = subdivideTriangleMultipleTimes(
-    baseTriangles[0],
+    aAAbaseTriangle,
     2
   );
   const baseTriangle = initiallySubdividedTriangle[0];
+  console.log("COUNT HERE", baseTriangle.length);
   for (let level = 0; level < input.levels; level++) {
     console.log(`generating ${level.toString()}`);
-    const subdivided = subdivideTriangleMultipleTimes(baseTriangle, level * 2);
+    const subdivided = subdivideTriangleMultipleTimes(
+      aAAbaseTriangle,
+      level * 2
+    );
     subdivided.map((x) => {
-      normalizeTriangle(x);
+      //  normalizeTriangle(x); // is this really a good idea?
     });
     const vertices = subdivided.flat();
 
@@ -298,6 +327,8 @@ export async function generateIcoSphere(
   const firstMat3 = mat3.create();
   let firstMat = false;
 
+  const minDot = -999;
+
   for (const originalTriangle of baseTriangles) {
     process.stdout.write(".");
     const subTriangles = subdivideTriangleMultipleTimes(originalTriangle, 2); // already divide in many smaller ones
@@ -309,28 +340,107 @@ export async function generateIcoSphere(
       vec3.min(min, min, center);
       vec3.max(max, max, center);
 
-      const armX = vec3.sub(glmTemp.vec3[0], triangle[0], triangle[1]);
-      vec3.normalize(armX, armX);
-      const armZ = vec3.sub(glmTemp.vec3[1], triangle[0], triangle[2]);
-      vec3.normalize(armZ, armZ);
-      const armY = vec3.cross(glmTemp.vec3[2], armX, armZ);
-      vec3.normalize(armY, armY);
-      vec3.cross(armZ, armY, armZ);
-      vec3.normalize(armZ, armZ);
+      // const armY = vec3.copy(glmTemp.vec3[0], center);
+      // vec3.normalize(armY, armY);
+      //
+      // const armX = vec3.sub(glmTemp.vec3[1], center, triangle[2]);
+      // vec3.normalize(armX, armX);
+      //
+      // const armZ = vec3.cross(glmTemp.vec3[2], armX, armY);
+      // vec3.normalize(armZ, armZ);
+
+      const unitVectorToMatrix = (v: vec3): mat3 => {
+        // unhinged
+        return mat3.fromValues(
+          v[0],
+          v[1],
+          v[2],
+          v[1],
+          v[2],
+          v[0],
+          v[2],
+          v[0],
+          v[1]
+        );
+      };
+
+      const normal = vec3.fromValues(0, 0, 0);
+      vec3.add(normal, normal, triangle[0]);
+      vec3.add(normal, normal, triangle[1]);
+      vec3.add(normal, normal, triangle[2]);
+      const centerT = vec3.create();
+      vec3.div(centerT, normal, [3, 3, 3]);
+      vec3.normalize(normal, normal);
+
+      const v1a = vec3.sub(glmTemp.vec3[2], triangle[2], centerT);
+      const v2a = vec3.sub(glmTemp.vec3[3], triangle[0], centerT);
+      const n = vec3.cross(glmTemp.vec3[4], v1a, v2a);
+
+      if (vec3.dot(n, normal) < 0.0) {
+        // it actualy doesnt do anything
+        vec3.inverse(n, n);
+      }
+
+      vec3.normalize(n, n);
+      const u1 = vec3.normalize(glmTemp.vec3[5], v1a);
+      const v1 = vec3.cross(glmTemp.vec3[6], n, u1);
+      vec3.normalize(v1, v1);
+
+      // glm::vec3 normal1 = glm::normalize(glm::cross(v1_1, v2_1)); // Perpendicular vector
+      // glm::vec3 u1 = glm::normalize(v1_1);                       // First basis vector
+      // glm::vec3 v1 = glm::normalize(glm::cross(normal1, u1));
+
+      //
+      // //0, 0.9845250844955444, 0.17524370551109314
+      // const q = quat.create();
+      // const q2 = quat.create();
+      // const q3 = quat.create();
+      // lookAlongQuat(q, armY, armX);
+      // // lookAlongQuat(q2, [0, 0.9845250844955444, 0.17524370551109314], [0,1,0]);
+      // quat.setAxisAngle(q2, [1.0, 0, 0.0], 0.9845250844955444);
+      // quat.setAxisAngle(q3, [0.0, 1.0, 0.0], 0.87524370551109314);
+      // // quat.setAxisAngle(q2, [0, 1, 0], 0.9845250844955444);
+      // quat.mul(q, q, q2);
+      // quat.mul(q, q, q3);
+
+      const a2 = u1;
+      const a1 = v1;
+      const a3 = n;
+
       const matrix = mat3.fromValues(
-        armX[0],
-        armY[0],
-        armZ[0],
-        armX[1],
-        armY[1],
-        armZ[1],
-        armX[2],
-        armY[2],
-        armZ[2]
+        a1[0],
+        a2[0],
+        a3[0],
+
+        a1[1],
+        a2[1],
+        a3[1],
+
+        a1[2],
+        a2[2],
+        a3[2]
       );
+      // mat3.fromQuat(matrix, q);
+      //
+      // const topDt = Math.abs(vec3.dot(armY, [0, 1, 0]));
+      // if (topDt > minDot) {
+      //   console.log();
+      //   console.log(icoSphere.positionMatrices.length, "armY", armY, topDt);
+      //   console.log();
+      //   console.log();
+      //   minDot = topDt;
+      // }
+
       if (!firstMat) {
         mat3.copy(firstMat3, matrix);
+        // mat3.identity(matrix);
         firstMat = true;
+        // console.log("armY", armY);
+      } else {
+        mat3.transpose(matrix, matrix);
+        // mat3.transpose();
+        //  mat3.mul(matrix, matrix, glmTemp.mat3[0]);
+        // mat3.mul(matrix, glmTemp.mat3[0], matrix);
       }
       icoSphere.positionMatrices.push({ center, mat3: matrix });
     }
