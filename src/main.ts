@@ -5,6 +5,7 @@ import { glmTemp } from "./glmTemporaryPools.ts";
 import { GPUApiInterface } from "./gpu/GPUApiInterface.ts";
 import { WebGLApiImplementation } from "./gpu/webgl/WebGLApiImplementation.ts";
 import { Camera } from "./scene/Camera.ts";
+import { IcosphereDrawer } from "./scene/IcosphereDrawer.ts";
 import { Mesh } from "./scene/Mesh.ts";
 import { SpotLight } from "./scene/SpotLight.ts";
 import { MeshDeferredLightingStage } from "./stages/MeshDeferredLightingStage.ts";
@@ -35,7 +36,7 @@ async function initWebGL2(): Promise<void> {
   const groundGeometry = await api.loadGeometry("ground.obj");
   const groundMesh = new Mesh(groundGeometry, dingusTexture);
 
-  const scene = [dingusMesh, groundMesh];
+  const scene: Mesh[] = [];
 
   const meshStage = new MeshMRTStage(api);
   await meshStage.initialize();
@@ -52,7 +53,7 @@ async function initWebGL2(): Promise<void> {
   const defaultFramebuffer = await api.getDefaultFramebuffer();
 
   const camera = new Camera();
-  camera.setPerspective(70, 1, 0.01, 1000);
+  camera.setPerspective(90, 1, 0.01, 1000);
   lookAlongQuat(camera.orientation, [0, 0, -1], [0, 1, 0]);
   vec3.set(camera.position, 0, 0.3, 5);
 
@@ -89,12 +90,17 @@ async function initWebGL2(): Promise<void> {
   lookAlongQuat(testLight.orientation, [0, -0.4, 0.76], vec3Up);
   lights.push(testLight);
 
+  const ico = new IcosphereDrawer(api);
+  await ico.initialize();
+
   const loop = async (): Promise<void> => {
     const elapsed = (Date.now() - startTime) / 1000.0;
 
     quat.setAxisAngle(dingusMesh.orientation, vec3Up, -elapsed);
 
     await meshStage.draw(camera, scene, { elapsed });
+
+    await ico.draw([0, 0, 0], 1, camera);
 
     await meshDeferredLightingState.draw(
       camera,
@@ -104,7 +110,7 @@ async function initWebGL2(): Promise<void> {
     );
 
     await outputStage.draw({
-      colorTexture: meshDeferredLightingState.getOutput(),
+      colorTexture: meshStage.getOutputs().color,
       distanceTexture: meshStageOutputs.distance,
     });
 

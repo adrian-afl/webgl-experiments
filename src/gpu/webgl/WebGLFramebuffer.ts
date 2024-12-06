@@ -37,16 +37,6 @@ export class WebGLDefaultFramebuffer implements DefaultFramebuffer {
     }
   }
 
-  public setBlending(blending: "none" | "add"): void {
-    if (blending === "none") {
-      this.gl.disable(this.gl.BLEND);
-    }
-    if (blending === "add") {
-      this.gl.enable(this.gl.BLEND);
-      this.gl.blendEquation(this.gl.FUNC_ADD);
-    }
-  }
-
   public resize(width: number, height: number): void {
     this.width = width;
     this.height = height;

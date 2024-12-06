@@ -47,6 +47,7 @@ export default tseslint.config(
             semi: ["off"],
             eqeqeq: "error",
             quotes: "off",
+            "@typescript-eslint/prefer-for-of": "off",
             "@typescript-eslint/no-unsafe-member-access": "off",
             "@typescript-eslint/no-unsafe-argument": "off",
             "@typescript-eslint/no-unsafe-assignment": "off",

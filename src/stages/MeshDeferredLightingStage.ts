@@ -147,11 +147,12 @@ export class MeshDeferredLightingStage {
   ): Promise<void> {
     await this.resolvingFramebuffer.bind();
     await this.resolvingFramebuffer.clear([0, 0, 0, 0], 1.0);
-    await this.resolvingFramebuffer.setBlending("add");
+    await this.api.setBlending("add");
     for (const light of lights) {
       await this.drawShadowMap(light, meshes);
       await this.drawResolve(camera, light, mrt);
     }
+    await this.api.setBlending("none");
   }
 
   public getOutput(): Texture2D {

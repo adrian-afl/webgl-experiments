@@ -43,7 +43,6 @@ export interface Geometry {
 export interface DefaultFramebuffer {
   clear(color: number[] & { length: 4 }, depth?: number): MaybePromise<void>;
   bind(): MaybePromise<void>;
-  setBlending(blending: "none" | "add"): MaybePromise<void>;
   resize(width: number, height: number): MaybePromise<void>;
   getSize(): MaybePromise<{ width: number; height: number }>;
 }
@@ -103,6 +102,10 @@ export interface GPUApiInterface {
     outputHeight: number,
     withDepth: boolean
   ): MaybePromise<void>;
+
+  setBlending(blending: "none" | "add"): MaybePromise<void>;
+  setCullFace(blending: "none" | "front" | "back"): MaybePromise<void>;
+
   createGeometry(data: Float32Array): MaybePromise<Geometry>;
   loadGeometry(file: string): MaybePromise<Geometry>;
 

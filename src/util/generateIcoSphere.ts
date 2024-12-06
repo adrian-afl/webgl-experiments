@@ -10,11 +10,7 @@ import { Object3dIntermediate, Vertex } from "../media/Object3dIntermediate.ts";
 
 export interface GenerateIcoSphereInput {
   outDir: string;
-  name: string;
   levels: number;
-  radius: number;
-  heightScale: number;
-  heightMap: string;
 }
 
 type FixedArray<T, L> = T[] & { length: L };
@@ -191,16 +187,17 @@ function xyzToPolar(xyz: vec3): vec2 {
   return tmp;
 }
 
-function polarToXyz(xyIn: vec2): vec3 {
-  const xy: vec2 = [xyIn[0] * 2.0 * Math.PI, xyIn[1] * Math.PI];
-  const z = Math.cos(xy[1]);
-  const x = Math.cos(xy[0]) * Math.sin(xy[1]);
-  const y = Math.sin(xy[0]) * Math.sin(xy[1]);
-  const tmp: vec3 = [x, y, z];
-  vec3.normalize(tmp, tmp);
-  return tmp;
-}
+// function polarToXyz(xyIn: vec2): vec3 {
+//   const xy: vec2 = [xyIn[0] * 2.0 * Math.PI, xyIn[1] * Math.PI];
+//   const z = Math.cos(xy[1]);
+//   const x = Math.cos(xy[0]) * Math.sin(xy[1]);
+//   const y = Math.sin(xy[0]) * Math.sin(xy[1]);
+//   const tmp: vec3 = [x, y, z];
+//   vec3.normalize(tmp, tmp);
+//   return tmp;
+// }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function generateIcoSphere(
   input: GenerateIcoSphereInput
 ): Promise<void> {
@@ -271,7 +268,6 @@ export async function generateIcoSphere(
         const vertices = subdividedTriangles.flat();
         const center = verticesCenter(vertices);
         const centerUV = xyzToPolar(center);
-        vec3.mul(center, center, [input.radius, input.radius, input.radius]);
 
         if (!printedFirst) {
           console.log(
@@ -281,7 +277,7 @@ export async function generateIcoSphere(
             `Triangle count per sphere ${(subdividedTriangles.length * baseTriangles.length).toString()}`
           );
           console.log(
-            `Vertex distance: ${(vec3.distance(vertices[0], vertices[1]) * input.radius).toFixed(3)}`
+            `Vertex distance for example earth: ${(vec3.distance(vertices[0], vertices[1]) * 6378000).toFixed(3)}`
           );
           printedFirst = true;
         }
@@ -291,7 +287,6 @@ export async function generateIcoSphere(
           // also normal and UV can be adjusted as well
           vertices.map((normal) => {
             const vert: vec3 = vec3.clone(normal);
-            vec3.mul(vert, vert, [input.radius, input.radius, input.radius]);
             vec3.sub(vert, vert, center);
             return new Vertex(vert, xyzToPolar(normal), normal);
           })
@@ -299,12 +294,12 @@ export async function generateIcoSphere(
         printedFirst = true;
         intermediate.recalculateTangents();
         const raw = intermediate.getVertexArray();
-        const fileName = `${input.name}-l${level.toString()}-uv${centerUV[0].toFixed(4)}x${centerUV[1].toFixed(4)}.raw`;
+        const fileName = `l${level.toString()}-uv${centerUV[0].toFixed(4)}x${centerUV[1].toFixed(4)}.raw`;
         descriptions.push({ level, center: [...center], fileName });
         fs.writeFileSync(path.join(input.outDir, fileName), raw);
       }
     }
-    const fileName = `${input.name}-description.json`;
+    const fileName = `description.json`;
     fs.writeFileSync(
       path.join(input.outDir, fileName),
       JSON.stringify(descriptions, undefined, 2)

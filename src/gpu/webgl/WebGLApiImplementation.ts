@@ -39,6 +39,10 @@ export class WebGLApiImplementation implements GPUApiInterface {
     if (!this.gl.getExtension("EXT_color_buffer_float")) {
       throw new Error("Rendering to floating point textures not supported");
     }
+    console.log(
+      "MAX_VERTEX_UNIFORM_VECTORS",
+      gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS)
+    );
     this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
     this.gl.enable(this.gl.CULL_FACE);
     this.gl.cullFace(this.gl.BACK);
@@ -48,6 +52,30 @@ export class WebGLApiImplementation implements GPUApiInterface {
       outputHeight,
       withDepth
     );
+  }
+
+  public setBlending(blending: "none" | "add"): void {
+    if (blending === "none") {
+      this.gl.disable(this.gl.BLEND);
+    }
+    if (blending === "add") {
+      this.gl.enable(this.gl.BLEND);
+      this.gl.blendEquation(this.gl.FUNC_ADD);
+    }
+  }
+
+  public setCullFace(blending: "none" | "front" | "back"): void {
+    if (blending === "none") {
+      this.gl.disable(this.gl.CULL_FACE);
+    }
+    if (blending === "front") {
+      this.gl.enable(this.gl.CULL_FACE);
+      this.gl.cullFace(this.gl.FRONT);
+    }
+    if (blending === "back") {
+      this.gl.enable(this.gl.CULL_FACE);
+      this.gl.cullFace(this.gl.BACK);
+    }
   }
 
   public createGeometry(data: Float32Array): MaybePromise<Geometry> {

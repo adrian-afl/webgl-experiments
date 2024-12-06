@@ -1,10 +1,6 @@
-import { generateIcoSphere } from "./util/generateIcoSphere.ts";
+import { generateIcoSphere } from "./util/generateIcoSphereInstanced.ts";
 
 void generateIcoSphere({
-  name: "test",
-  outDir: "generationtest/test-model",
-  levels: 4,
-  heightMap: "",
-  heightScale: 1.0,
-  radius: 6378 * 1000,
+  outDir: "public/icosphere",
+  levels: 5,
 });
