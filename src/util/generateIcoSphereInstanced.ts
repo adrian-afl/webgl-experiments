@@ -253,10 +253,20 @@ export async function generateIcoSphere(
 
   const levelsMeshes: string[] = [];
   //
+  /*
+    unit triangle of sides 1
+    h is 0.8660254038
+
+    y downwards is 1/3 * 0.8660254038 = 0.2886751346
+    y upwards is 2/3 = 0.5773502692
+
+    x left is 0.5
+    x right is 0.5
+ */
   const aAAbaseTriangle: Triangle = [
-    [0, 1, 0.0],
-    [1.151, -1, 0.0],
-    [-1.151, -1, 0.0],
+    [0, 0.5773502692, 0.0],
+    [-0.5, -0.2886751346, 0.0],
+    [0.5, -0.2886751346, 0.0],
     // [-1, 1, 0],
     // [-1, 0, 0],
     // [0, 1, 1],
@@ -287,7 +297,13 @@ export async function generateIcoSphere(
       level * 2
     );
     subdivided.map((x) => {
-      //  normalizeTriangle(x); // is this really a good idea?
+      vec3.add(x[0], x[0], [0, 0, 2]);
+      vec3.add(x[1], x[1], [0, 0, 2]);
+      vec3.add(x[2], x[2], [0, 0, 2]);
+      normalizeTriangle(x); // is this really a good idea?
+      vec3.sub(x[0], x[0], [0, 0, 2]);
+      vec3.sub(x[1], x[1], [0, 0, 2]);
+      vec3.sub(x[2], x[2], [0, 0, 2]);
     });
     const vertices = subdivided.flat();
 
@@ -333,10 +349,15 @@ export async function generateIcoSphere(
     process.stdout.write(".");
     const subTriangles = subdivideTriangleMultipleTimes(originalTriangle, 2); // already divide in many smaller ones
     for (const triangle of subTriangles) {
+      const x = triangle;
+      normalizeTriangle(x); // is this really a good idea?
+
       // console.log(
       //   `Vertex distance: ${vec3.distance(triangle[0], triangle[1]).toFixed(3)}`
       // );
       const center = verticesCenter(triangle);
+      vec3.normalize(center, center);
+      vec3.scale(center, center, 2);
       vec3.min(min, min, center);
       vec3.max(max, max, center);
 
@@ -405,7 +426,7 @@ export async function generateIcoSphere(
 
       const a2 = u1;
       const a1 = v1;
-      const a3 = n;
+      const a3 = normal;
 
       const matrix = mat3.fromValues(
         a1[0],

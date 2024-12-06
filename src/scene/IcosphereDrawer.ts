@@ -51,7 +51,7 @@ export class IcosphereDrawer {
       geometries.push(await this.api.createGeometry(new Float32Array(bin)));
     }
     this.loaded = {
-      geometries,
+      geometries: geometries.toReversed(),
       positionMatrices: data.positionMatrices.map(({ center, mat3: m }) => {
         // quat.setAxisAngle(glmTemp.quat[0], [1, 0, 0], Math.PI / 2);
         // mat3.fromQuat(glmTemp.mat3[0], glmTemp.quat[0]);
@@ -145,7 +145,7 @@ export class IcosphereDrawer {
   // the min max of centers across all axes are -1.5665311813354492 and 1.5665311813354492
   // when being on the very edge of the triangle, all trnagles at the edge must be rendered, so the first transition must be after 0.28833
   // SO FAR there are 5 levels, so 4 threshold are needed, 4 transitions
-  private distanceSteps = [0.3, 0.5, 0.7, 1.0];
+  private distanceSteps = [0.3, 0.5, 0.7, 10.0];
 
   private getGeometry(distance: number, scale: number): Geometry {
     for (let i = 0; i < this.distanceSteps.length; i++) {

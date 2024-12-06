@@ -20,10 +20,16 @@ uniform int index;
 uniform vec4 centers[320];
 uniform mat4 matrices[320];
 
+smooth out float vertexId;
+
 void main() {
+  //  vertexId = mod(float(gl_VertexID), 3.0);
+  vertexId = float(gl_VertexID % 3);
   uv = inUV;
 
-  vec3 pos = (mat3(matrices[index]) * (inVertexPos * 0.2)) + centers[index].xyz;
+  vec3 pos = (mat3(matrices[index]) * (inVertexPos * 1.2)) + centers[index].xyz;
+
+  //  pos = normalize(pos);
 
   worldPos = pos;
   norm = vec3(mat3(matrices[index]) * inNormal);
