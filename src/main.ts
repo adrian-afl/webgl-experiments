@@ -102,7 +102,7 @@ async function initWebGL2(): Promise<void> {
 
     await meshStage.draw(camera, scene, { elapsed });
 
-    await ico.draw([0, 0, 0], 1, camera);
+    await ico.draw([0, 0, 0], dingusMesh.orientation, 1, camera);
 
     await meshDeferredLightingState.draw(
       camera,

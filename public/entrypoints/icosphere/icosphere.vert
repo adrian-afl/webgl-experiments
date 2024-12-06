@@ -27,7 +27,9 @@ void main() {
   vertexId = float(gl_VertexID % 3);
   uv = inUV;
 
-  vec3 pos = (mat3(matrices[index]) * (inVertexPos * 1.2)) + centers[index].xyz;
+  mat3 triangleRotmat = mat3(modelMatrix) * mat3(matrices[index]);
+  vec3 centerDisplacement = centers[index].xyz;
+  vec3 pos = triangleRotmat * (inVertexPos * 1.0) + centerDisplacement;
 
   //  pos = normalize(pos);
 

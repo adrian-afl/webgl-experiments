@@ -1,4 +1,4 @@
-import { mat3, mat4, vec3 } from "gl-matrix";
+import { mat3, mat4, quat, vec3 } from "gl-matrix";
 
 import { glmTemp } from "../glmTemporaryPools.ts";
 import {
@@ -33,6 +33,7 @@ export class IcosphereDrawer {
     sphereCenter: true;
     perspectiveMatrix: true;
     viewMatrix: true;
+    modelMatrix: true;
     index: true;
   }>;
   // private translatedCenters: vec4[] = [];
@@ -95,6 +96,7 @@ export class IcosphereDrawer {
         sphereCenter: true,
         perspectiveMatrix: true,
         viewMatrix: true,
+        modelMatrix: true,
         index: true,
       }
     );
@@ -119,17 +121,28 @@ export class IcosphereDrawer {
   private async updateCentersAndSetCentersUniform(
     sphereCenter: vec3,
     scale: number,
-    cameraPosition: vec3
+    cameraPosition: vec3,
+    orientation: quat
   ): Promise<void> {
-    const tmp = glmTemp.vec3[0];
-    const tmp2 = glmTemp.vec3[1];
-    const tmp3 = glmTemp.vec3[2];
-    vec3.sub(tmp, sphereCenter, cameraPosition);
+    const tmpCameraSpace = glmTemp.vec3[0];
+    const tmpScaledDisplacement = glmTemp.vec3[1];
+    const tmpFinal = glmTemp.vec3[2];
+    const tmpRotatedDisplacement = glmTemp.vec3[4];
+    vec3.sub(tmpCameraSpace, sphereCenter, cameraPosition);
     const count = this.loaded.positionMatrices.length;
     for (let i = 0; i < count; i++) {
-      vec3.scale(tmp2, this.loaded.positionMatrices[i].center, scale);
-      vec3.add(tmp3, tmp, tmp2);
-      this.translatedCentersBuffer.set(tmp3, i * 4);
+      vec3.scale(
+        tmpScaledDisplacement,
+        this.loaded.positionMatrices[i].center,
+        scale
+      );
+      vec3.transformQuat(
+        tmpRotatedDisplacement,
+        tmpScaledDisplacement,
+        orientation
+      );
+      vec3.add(tmpFinal, tmpCameraSpace, tmpRotatedDisplacement);
+      this.translatedCentersBuffer.set(tmpFinal, i * 4);
       // vec4.set(this.translatedCenters[i], tmp2[0], tmp2[1], tmp2[2], 0.0);
     }
     await this.shader.setUniformArray(
@@ -145,7 +158,7 @@ export class IcosphereDrawer {
   // the min max of centers across all axes are -1.5665311813354492 and 1.5665311813354492
   // when being on the very edge of the triangle, all trnagles at the edge must be rendered, so the first transition must be after 0.28833
   // SO FAR there are 5 levels, so 4 threshold are needed, 4 transitions
-  private distanceSteps = [0.3, 0.5, 0.7, 10.0];
+  private distanceSteps = [0.3, 0.5, 10.7, 10.0];
 
   private getGeometry(distance: number, scale: number): Geometry {
     for (let i = 0; i < this.distanceSteps.length; i++) {
@@ -159,6 +172,7 @@ export class IcosphereDrawer {
 
   public async draw(
     position: vec3,
+    orientation: quat,
     scale: number,
     camera: Camera
   ): Promise<void> {
@@ -167,7 +181,16 @@ export class IcosphereDrawer {
     await this.updateCentersAndSetCentersUniform(
       position,
       scale,
-      camera.position
+      camera.position,
+      orientation
+    );
+    mat4.fromQuat(glmTemp.mat4[0], orientation);
+
+    await this.shader.setUniformMatrixArray(
+      "modelMatrix",
+      4,
+      false,
+      glmTemp.mat4[0]
     );
     await this.shader.setUniform("scale", "float", [scale]);
     await this.shader.setUniform("sphereCenter", "float", [

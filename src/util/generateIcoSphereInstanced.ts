@@ -166,6 +166,12 @@ function normalizeTriangle(tri: Triangle): void {
   vec3.normalize(tri[2], tri[2]);
 }
 
+function scaleTriangle(tri: Triangle, num: number): void {
+  vec3.scale(tri[0], tri[0], num);
+  vec3.scale(tri[1], tri[1], num);
+  vec3.scale(tri[2], tri[2], num);
+}
+
 function verticesCenter(vertices: vec3[]): vec3 {
   const center = vec3.create();
   for (const item of vertices) {
@@ -341,7 +347,7 @@ export async function generateIcoSphere(
   } = { levelsMeshes, positionMatrices: [] };
 
   const firstMat3 = mat3.create();
-  let firstMat = false;
+  const firstMat = false;
 
   const minDot = -999;
 
@@ -349,84 +355,23 @@ export async function generateIcoSphere(
     process.stdout.write(".");
     const subTriangles = subdivideTriangleMultipleTimes(originalTriangle, 2); // already divide in many smaller ones
     for (const triangle of subTriangles) {
-      const x = triangle;
-      normalizeTriangle(x); // is this really a good idea?
+      normalizeTriangle(triangle);
 
-      // console.log(
-      //   `Vertex distance: ${vec3.distance(triangle[0], triangle[1]).toFixed(3)}`
-      // );
-      const center = verticesCenter(triangle);
-      vec3.normalize(center, center);
-      vec3.scale(center, center, 2);
-      vec3.min(min, min, center);
-      vec3.max(max, max, center);
+      const u1 = vec3.sub(glmTemp.vec3[2], triangle[1], triangle[0]);
+      vec3.normalize(u1, u1);
 
-      // const armY = vec3.copy(glmTemp.vec3[0], center);
-      // vec3.normalize(armY, armY);
-      //
-      // const armX = vec3.sub(glmTemp.vec3[1], center, triangle[2]);
-      // vec3.normalize(armX, armX);
-      //
-      // const armZ = vec3.cross(glmTemp.vec3[2], armX, armY);
-      // vec3.normalize(armZ, armZ);
+      const v2a = vec3.sub(glmTemp.vec3[3], triangle[2], triangle[1]);
+      vec3.normalize(v2a, v2a);
 
-      const unitVectorToMatrix = (v: vec3): mat3 => {
-        // unhinged
-        return mat3.fromValues(
-          v[0],
-          v[1],
-          v[2],
-          v[1],
-          v[2],
-          v[0],
-          v[2],
-          v[0],
-          v[1]
-        );
-      };
-
-      const normal = vec3.fromValues(0, 0, 0);
-      vec3.add(normal, normal, triangle[0]);
-      vec3.add(normal, normal, triangle[1]);
-      vec3.add(normal, normal, triangle[2]);
-      const centerT = vec3.create();
-      vec3.div(centerT, normal, [3, 3, 3]);
-      vec3.normalize(normal, normal);
-
-      const v1a = vec3.sub(glmTemp.vec3[2], triangle[2], centerT);
-      const v2a = vec3.sub(glmTemp.vec3[3], triangle[0], centerT);
-      const n = vec3.cross(glmTemp.vec3[4], v1a, v2a);
-
-      if (vec3.dot(n, normal) < 0.0) {
-        // it actualy doesnt do anything
-        vec3.inverse(n, n);
-      }
-
+      const n = vec3.cross(glmTemp.vec3[4], u1, v2a);
       vec3.normalize(n, n);
-      const u1 = vec3.normalize(glmTemp.vec3[5], v1a);
+
       const v1 = vec3.cross(glmTemp.vec3[6], n, u1);
       vec3.normalize(v1, v1);
 
-      // glm::vec3 normal1 = glm::normalize(glm::cross(v1_1, v2_1)); // Perpendicular vector
-      // glm::vec3 u1 = glm::normalize(v1_1);                       // First basis vector
-      // glm::vec3 v1 = glm::normalize(glm::cross(normal1, u1));
-
-      //
-      // //0, 0.9845250844955444, 0.17524370551109314
-      // const q = quat.create();
-      // const q2 = quat.create();
-      // const q3 = quat.create();
-      // lookAlongQuat(q, armY, armX);
-      // // lookAlongQuat(q2, [0, 0.9845250844955444, 0.17524370551109314], [0,1,0]);
-      // quat.setAxisAngle(q2, [1.0, 0, 0.0], 0.9845250844955444);
-      // quat.setAxisAngle(q3, [0.0, 1.0, 0.0], 0.87524370551109314);
-      // // quat.setAxisAngle(q2, [0, 1, 0], 0.9845250844955444);
-      // quat.mul(q, q, q2);
-      // quat.mul(q, q, q3);
-
-      const a2 = u1;
-      const a1 = v1;
-      const a3 = normal;
+      const a1 = u1;
+      const a2 = v1;
+      const a3 = n;
 
       const matrix = mat3.fromValues(
         a1[0],
@@ -441,28 +386,12 @@ export async function generateIcoSphere(
         a2[2],
         a3[2]
       );
-      // mat3.fromQuat(matrix, q);
-      //
-      // const topDt = Math.abs(vec3.dot(armY, [0, 1, 0]));
-      // if (topDt > minDot) {
-      //   console.log();
-      //   console.log(icoSphere.positionMatrices.length, "armY", armY, topDt);
-      //   console.log();
-      //   console.log();
-      //   minDot = topDt;
-      // }
+      mat3.transpose(matrix, matrix);
 
-      if (!firstMat) {
-        mat3.copy(firstMat3, matrix);
-        // mat3.identity(matrix);
-        firstMat = true;
-        // console.log("armY", armY);
-      } else {
-        mat3.transpose(matrix, matrix);
-        // mat3.transpose();
-        //  mat3.mul(matrix, matrix, glmTemp.mat3[0]);
-        // mat3.mul(matrix, glmTemp.mat3[0], matrix);
-      }
+      const center = verticesCenter(triangle);
+      vec3.normalize(center, center);
+      vec3.scale(center, center, 2);
+
       icoSphere.positionMatrices.push({ center, mat3: matrix });
     }
   }
