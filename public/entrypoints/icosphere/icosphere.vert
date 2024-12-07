@@ -12,15 +12,19 @@ in vec3 inNormal;
 in vec4 inTangent;
 
 out vec3 norm;
+out vec3 sphereSpace;
 out vec3 worldPos;
 out vec2 uv;
 
 uniform vec3 sphereCenter;
 uniform int index;
 uniform vec4 centers[320];
+uniform vec4 centersWithoutTranslation[320];
 uniform mat4 matrices[320];
 
 smooth out float vertexId;
+
+#include "include/polar.glsl"
 
 void main() {
   //  vertexId = mod(float(gl_VertexID), 3.0);
@@ -34,7 +38,9 @@ void main() {
   //  pos = normalize(pos);
 
   worldPos = pos;
-  norm = vec3(mat3(matrices[index]) * inNormal);
+  sphereSpace = normalize(mat3(modelMatrix) * mat3(matrices[index]) * (inVertexPos * 1.0) + centersWithoutTranslation[index].xyz);
+  //  norm = vec3(triangleRotmat * (vec3(0, 0, 1) + (inVertexPos * 0.57)));
+  norm = normalize(triangleRotmat * ((inVertexPos * 1.0) + centersWithoutTranslation[index].xyz));
 
   gl_Position = vec4(perspectiveMatrix * viewMatrix * vec4(pos, 1.0));
 }

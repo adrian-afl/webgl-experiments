@@ -1,9 +1,23 @@
 #pragma once
+
 vec2 xyzToPolar(vec3 xyz) {
   float theta = atan(xyz.y, xyz.x);
   float phi = acos(clamp(xyz.z, -1.0, 1.0));
   return vec2(theta, phi) / vec2(2.0 * 3.1415, 3.1415);
 }
+//
+//vec2 xyzToPolar(vec3 xyz) {
+//  float theta = atan(xyz.y, xyz.x);
+//  float psi = atan(xyz.z, sqrt(xyz.x * xyz.x + xyz.y * xyz.y));
+//  return vec2(theta, psi) / vec2(2.0 * 3.1415, 2.0 * 3.1415);
+//}
+
+//vec2 xyzToPolar(vec3 xyz) {
+//  float radius = sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
+//  float theta = atan(xyz.y, xyz.x);
+//  float phi = acos(xyz.z / radius);
+//  return vec2(theta, phi) / vec2(2.0 * 3.1415, 3.1415);
+//}
 
 vec3 polarToXyz(vec2 xy) {
   xy *= vec2(2.0 * 3.1415, 3.1415);

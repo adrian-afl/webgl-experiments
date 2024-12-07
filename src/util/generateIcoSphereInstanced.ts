@@ -214,7 +214,7 @@ export async function generateIcoSphere(
     aAAbaseTriangle,
     2
   );
-  scaleInPlaceTriangle(aAAbaseTriangle, 0.65);
+  scaleInPlaceTriangle(aAAbaseTriangle, 0.7);
   const baseTriangle = initiallySubdividedTriangle[0];
   console.log("COUNT HERE", baseTriangle.length);
   for (let level = 0; level < input.levels; level++) {

@@ -96,7 +96,7 @@ async function initWebGL2(): Promise<void> {
   const loop = async (): Promise<void> => {
     const elapsed = (Date.now() - startTime) / 1000.0;
 
-    // vec3.set(camera.position, 0, 0.3, Math.sin(elapsed * 0.1) * 5 + 6);
+    // vec3.set(camera.position, 0, 0.3, Math.sin(elapsed * 0.3) * 5 + 6);
 
     quat.setAxisAngle(dingusMesh.orientation, vec3Up, -elapsed);
 

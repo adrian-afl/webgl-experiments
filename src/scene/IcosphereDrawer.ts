@@ -5,6 +5,7 @@ import {
   GPUApiInterface,
   Geometry,
   ShaderProgram,
+  Texture2D,
 } from "../gpu/GPUApiInterface.ts";
 import { Camera } from "./Camera.ts";
 
@@ -29,20 +30,30 @@ export class IcosphereDrawer {
   private shader!: ShaderProgram<{
     scale: true;
     centers: true;
+    centersWithoutTranslation: true;
     matrices: true;
     sphereCenter: true;
     perspectiveMatrix: true;
     viewMatrix: true;
     modelMatrix: true;
     index: true;
+    tex: true;
   }>;
   // private translatedCenters: vec4[] = [];
+  private centersBuffer = new Float32Array(4 * 320);
   private translatedCentersBuffer = new Float32Array(4 * 320);
   private matricesBuffer = new Float32Array(4 * 4 * 320);
+
+  private texture!: Texture2D;
 
   public constructor(private readonly api: GPUApiInterface) {}
 
   public async initialize(): Promise<void> {
+    this.texture = await this.api.loadTexture2D("earth.jpg", {
+      wrapX: "clamp",
+      wrapY: "clamp",
+    });
+
     const response = await fetch("icosphere/icosphere.json");
     const data = (await response.json()) as IcoSphereDescriptionType;
     const geometries: Geometry[] = [];
@@ -92,12 +103,14 @@ export class IcosphereDrawer {
       {
         scale: true,
         centers: true,
+        centersWithoutTranslation: true,
         matrices: true,
         sphereCenter: true,
         perspectiveMatrix: true,
         viewMatrix: true,
         modelMatrix: true,
         index: true,
+        tex: true,
       }
     );
 
@@ -143,6 +156,7 @@ export class IcosphereDrawer {
       );
       vec3.add(tmpFinal, tmpCameraSpace, tmpRotatedDisplacement);
       this.translatedCentersBuffer.set(tmpFinal, i * 4);
+      this.centersBuffer.set(tmpRotatedDisplacement, i * 4);
       // vec4.set(this.translatedCenters[i], tmp2[0], tmp2[1], tmp2[2], 0.0);
     }
     await this.shader.setUniformArray(
@@ -151,6 +165,12 @@ export class IcosphereDrawer {
       4,
       this.translatedCentersBuffer
     );
+    await this.shader.setUniformArray(
+      "centersWithoutTranslation",
+      "float",
+      4,
+      this.centersBuffer
+    );
   }
 
   // triangle edge is 0.5, so i think this should be taken into consideration beforehand
@@ -158,7 +178,7 @@ export class IcosphereDrawer {
   // the min max of centers across all axes are -1.5665311813354492 and 1.5665311813354492
   // when being on the very edge of the triangle, all trnagles at the edge must be rendered, so the first transition must be after 0.28833
   // SO FAR there are 5 levels, so 4 threshold are needed, 4 transitions
-  private distanceSteps = [0.3, 0.5, 10.7, 10.0];
+  private distanceSteps = [0.5, 1.5, 3.7, 35.0];
 
   private getGeometry(distance: number, scale: number): Geometry {
     for (let i = 0; i < this.distanceSteps.length; i++) {
@@ -177,6 +197,13 @@ export class IcosphereDrawer {
     camera: Camera
   ): Promise<void> {
     await this.shader.use();
+
+    await this.shader.setSamplersArray([
+      {
+        name: "tex",
+        texture: this.texture,
+      },
+    ]);
 
     await this.updateCentersAndSetCentersUniform(
       position,
@@ -208,6 +235,7 @@ export class IcosphereDrawer {
         this.loaded.positionMatrices[i].center,
         scale
       );
+      vec3.transformQuat(glmTemp.vec3[0], glmTemp.vec3[0], orientation);
       vec3.add(glmTemp.vec3[1], position, glmTemp.vec3[0]);
       const distance = vec3.distance(glmTemp.vec3[1], camera.position);
       const geometry = this.getGeometry(distance, scale);
