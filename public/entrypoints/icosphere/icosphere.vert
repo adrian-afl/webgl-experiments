@@ -17,6 +17,7 @@ out vec3 worldPos;
 out vec2 uv;
 
 uniform vec3 sphereCenter;
+uniform float scale;
 uniform int index;
 uniform vec4 centers[320];
 uniform vec4 centersWithoutTranslation[320];
@@ -33,14 +34,14 @@ void main() {
 
   mat3 triangleRotmat = mat3(modelMatrix) * mat3(matrices[index]);
   vec3 centerDisplacement = centers[index].xyz;
-  vec3 pos = triangleRotmat * (inVertexPos * 1.0) + centerDisplacement;
+  vec3 pos = triangleRotmat * (inVertexPos * scale) + centerDisplacement;
 
   //  pos = normalize(pos);
 
   worldPos = pos;
-  sphereSpace = normalize(mat3(modelMatrix) * mat3(matrices[index]) * (inVertexPos * 1.0) + centersWithoutTranslation[index].xyz);
+  sphereSpace = normalize(mat3(modelMatrix) * mat3(matrices[index]) * (inVertexPos * scale) + centersWithoutTranslation[index].xyz);
   //  norm = vec3(triangleRotmat * (vec3(0, 0, 1) + (inVertexPos * 0.57)));
-  norm = normalize(triangleRotmat * ((inVertexPos * 1.0) + centersWithoutTranslation[index].xyz));
+  norm = normalize(triangleRotmat * ((inVertexPos * scale) + centersWithoutTranslation[index].xyz));
 
   gl_Position = vec4(perspectiveMatrix * viewMatrix * vec4(pos, 1.0));
 }

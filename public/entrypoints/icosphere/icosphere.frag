@@ -51,8 +51,8 @@ void main() {
   //  outColor = vec4(vec3(-worldPos.z * 0.52 - 1.0) * color, 1.0);
   //  outColor = vec4(pow(dot(normalize(ssn), normalize(vec3(-1.0, 1.0, 1.0))), 3.0) * vec3(1.0), 1.0);
   //  outColor = vec4(step(0.0, uv.x), 0.0, 0.0, 1.0);
-  float dt = pow(dot(normalize(ssnWorldSpace), normalize(vec3(0.5, 0.5, 1.0))), 3.0);
-  outColor = vec4(texture(tex, uv).xyz * dt, 1.0);
+  float dt = pow(dot(normalize(ssnWorldSpace), normalize(vec3(0.5, 0.5, 1.0))), 1.0);
+  outColor = vec4(texture(tex, uv).xyz * dt * 1.2, 1.0);
   outWorldPos = worldPos;
 
   outNormal = norm;

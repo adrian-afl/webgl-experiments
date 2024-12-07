@@ -96,7 +96,7 @@ async function initWebGL2(): Promise<void> {
   const loop = async (): Promise<void> => {
     const elapsed = (Date.now() - startTime) / 1000.0;
 
-    // vec3.set(camera.position, 0, 0.3, Math.sin(elapsed * 0.3) * 5 + 6);
+    vec3.set(camera.position, 0, 0.3, Math.sin(elapsed * 0.3) * 5 + 16);
 
     quat.setAxisAngle(dingusMesh.orientation, vec3Up, -elapsed);
 
@@ -107,7 +107,7 @@ async function initWebGL2(): Promise<void> {
     quat.setAxisAngle(glmTemp.quat[2], [0, 0, 1], elapsed * 0.3);
     quat.mul(glmTemp.quat[1], glmTemp.quat[1], glmTemp.quat[0]);
     quat.mul(glmTemp.quat[1], glmTemp.quat[1], glmTemp.quat[2]);
-    await ico.draw([0, 0, 0], glmTemp.quat[1], 1, camera);
+    await ico.draw([0, 0, 0], glmTemp.quat[1], 2, camera);
 
     await meshDeferredLightingState.draw(
       camera,

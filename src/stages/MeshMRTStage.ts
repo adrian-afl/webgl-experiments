@@ -107,7 +107,7 @@ export class MeshMRTStage {
     uniforms: { elapsed: number }
   ): Promise<void> {
     await this.framebuffer.bind();
-    await this.framebuffer.clear([1, 1, 1, 1], 1.0);
+    await this.framebuffer.clear([0, 0, 0, 1], 1.0);
     await this.meshProgram.use();
     await this.meshProgram.setUniform("elapsed", "float", [uniforms.elapsed]);
     await camera.setUniforms(this.meshProgram);
